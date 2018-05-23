@@ -3,32 +3,28 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 func main() {
-	gen := func(ctx context.Context) <-chan int {
-		dst := make(chan int)
-		n := 1
-		go func() {
+
+	// create context and function for cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// call go routines waiting for its cancellation
+	for i := 0; i < 4; i++ {
+		go func(i int) {
 			for {
 				select {
 				case <-ctx.Done():
-					return // returning not to leak the goroutine
-				case dst <- n:
-					n++
+					fmt.Printf("%v: ctx.Done(): %v\n", i, ctx.Err())
+					return
 				}
 			}
-		}()
-		return dst
+		}(i)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-
-	for n := range gen(ctx) {
-		fmt.Println(n)
-		if n == 5 {
-			cancel()
-			break
-		}
-	}
+	// cancel context and go routines, respectively, and wait for printed messages
+	cancel()
+	time.Sleep(time.Millisecond)
 }

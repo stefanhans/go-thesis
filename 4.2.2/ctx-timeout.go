@@ -7,13 +7,24 @@ import (
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*80)
+	// create context with timeout for cancellation
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	select {
-	case <-time.After(1 * time.Second):
-		fmt.Println("overslept")
-	case <-ctx.Done():
-		fmt.Println(ctx.Err()) // prints "context deadline exceeded"
+	// call go routines waiting for its cancellation
+	for i := 0; i < 4; i++ {
+		go func(i int) {
+			for {
+				select {
+				case <-ctx.Done():
+					fmt.Printf("%v: ctx.Done(): %v\n", i, ctx.Err())
+					return
+				}
+			}
+		}(i)
 	}
+
+	// wait for deadline cancelling context and go routines, respectively
+	// and for printed messages
+	time.Sleep(time.Second)
 }
