@@ -24,8 +24,7 @@ func main() {
 		}
 		// Range map to capitalize string values
 		for key := range jsonMap {
-			switch convertedValue := jsonMap[key].(type) {
-			case string:
+			if convertedValue, ok := jsonMap[key].(string); ok {
 				jsonMap[key] = strings.Title(convertedValue)
 			}
 		}
