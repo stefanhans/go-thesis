@@ -1,0 +1,22 @@
+syntax = 'proto3';
+
+package info;
+
+message Info {
+    string text = 1;
+    string from = 2;
+}
+
+message InfoList {
+    // creates a slice of Info
+    repeated Info infos = 1;
+}
+
+// Empty message type used for Read method
+message Void {}
+
+// Service definition for gRPC plugin
+service Infos {
+    rpc Read(Void) returns (InfoList) {}
+    rpc Write(Info) returns (Info) {}
+}
