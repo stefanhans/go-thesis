@@ -1,0 +1,17 @@
+name: Miller
+members:
+- kind: Daddy
+  firstname: Paul
+  age: 25
+- kind: Mummy
+  firstname: Susan
+  age: 21
+- kind: Daughter
+  firstname: Linda
+  age: 8
+- kind: Son
+  firstname: Peter
+  age: 5
+- kind: Son
+  firstname: Michael
+  age: 3
