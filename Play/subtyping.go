@@ -4,7 +4,7 @@ import "fmt"
 
 type Artist struct {
 	Name string
-	Art string
+	Art  string
 }
 
 type Human interface {

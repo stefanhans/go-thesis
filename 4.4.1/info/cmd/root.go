@@ -44,10 +44,10 @@ var client info.InfosClient
 
 // *** CUSTOMIZED ***
 func init() {
-		conn, err := grpc.Dial(":8888", grpc.WithInsecure())
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not connect to backend: %v\n", err)
-			os.Exit(1)
-		}
-		client = info.NewInfosClient(conn)
+	conn, err := grpc.Dial(":8888", grpc.WithInsecure())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not connect to backend: %v\n", err)
+		os.Exit(1)
+	}
+	client = info.NewInfosClient(conn)
 }

@@ -2,11 +2,11 @@ package main
 
 import "fmt"
 
-type Artist struct { Name string }
+type Artist struct{ Name string }
 
-type Writer struct { Artist }
+type Writer struct{ Artist }
 
-type Painter struct { Artist }
+type Painter struct{ Artist }
 
 func (a *Artist) Talk() {
 	fmt.Printf("I am an artist named %s\n", a.Name)

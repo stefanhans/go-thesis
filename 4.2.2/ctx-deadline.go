@@ -8,7 +8,7 @@ import (
 
 func main() {
 	// create context with deadline for cancellation
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(50 * time.Millisecond))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(50*time.Millisecond))
 	defer cancel()
 
 	// call go routines waiting for its cancellation

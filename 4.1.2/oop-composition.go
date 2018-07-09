@@ -8,7 +8,7 @@ type Author struct {
 }
 
 type Book struct {
-	Title string
+	Title  string
 	Author Author
 }
 

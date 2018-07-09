@@ -1,11 +1,11 @@
 package main
 
 import (
-	"encoding/json"
-	"log"
-	"fmt"
-	"os"
 	"bytes"
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
 )
 
 type Animal struct {

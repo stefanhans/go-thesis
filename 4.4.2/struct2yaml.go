@@ -25,19 +25,19 @@ func main() {
 		Name: "Cook",
 		Members: []Member{
 			Member{
-				Kind: "Daddy",
+				Kind:      "Daddy",
 				Firstname: "Sam",
-				Age: 31,
+				Age:       31,
 			},
 			Member{
-				Kind: "Mummy",
+				Kind:      "Mummy",
 				Firstname: "Patricia",
-				Age: 28,
+				Age:       28,
 			},
 			Member{
-				Kind: "Son",
+				Kind:      "Son",
 				Firstname: "Peter",
-				Age: 3,
+				Age:       3,
 			},
 		},
 	}

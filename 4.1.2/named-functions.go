@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 )
 
 // named variadic function with multiple return values
@@ -14,7 +14,7 @@ func divide(divisor int, dividends ...int) (float64, error) {
 		for _, d := range dividends {
 			dividend += d
 		}
-		return float64(dividend/divisor), nil
+		return float64(dividend / divisor), nil
 	}
 }
 
@@ -39,7 +39,7 @@ func main() {
 	}
 
 	// empty variable parameter uses type's default value, i.e. 0
-	quotient, err = divide(2, )
+	quotient, err = divide(2)
 
 	if err != nil {
 		fmt.Printf("Division failed: %v\n", err)

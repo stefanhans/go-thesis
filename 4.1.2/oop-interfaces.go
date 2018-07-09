@@ -2,13 +2,13 @@ package main
 
 import "fmt"
 
-type Human struct { Name string }
+type Human struct{ Name string }
 
-type Man struct { Human }
+type Man struct{ Human }
 
-type Women struct { Human }
+type Women struct{ Human }
 
-type Talker interface { Talk() }
+type Talker interface{ Talk() }
 
 func SpeakOut(t Talker) {
 	t.Talk()

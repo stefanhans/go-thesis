@@ -22,10 +22,10 @@ func (node *NodeOfInt) Start() {
 			select {
 
 			case in := <-node.in:
-				node.out <- node.f(in)   // Handle data (DEADLOCKS!)
+				node.out <- node.f(in) // Handle data (DEADLOCKS!)
 
-			case node.in = <-node.cin:   // Change input channel
-			case node.f = <-node.cf:     // Change function
+			case node.in = <-node.cin: // Change input channel
+			case node.f = <-node.cf: // Change function
 			case node.out = <-node.cout: // Change output channel
 			}
 		}
@@ -82,7 +82,7 @@ func main() {
 	node_2.SetFunc(func(in int) int { return in * 2 })      //
 
 	node_1.Connect(node_2).Printf("%v ") // stream configuration
-	node_1.ProduceAtMs(50)                   // sending data
+	node_1.ProduceAtMs(50)               // sending data
 	time.Sleep(time.Second)
 	fmt.Println()
 

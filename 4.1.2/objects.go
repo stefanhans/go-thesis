@@ -6,6 +6,7 @@ type rectangle struct {
 	width  int
 	height int
 }
+
 func (rect *rectangle) area() int {
 	return rect.width * rect.height
 }
