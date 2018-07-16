@@ -3,13 +3,13 @@ package main
 import (
 	"log"
 
-	"github.com/jroimartin/gocui"
 	"fmt"
+	"github.com/jroimartin/gocui"
 )
 
 var (
-	msg         string
-	nickname    string
+	msg             string
+	nickname        string
 	initialMessages string
 )
 

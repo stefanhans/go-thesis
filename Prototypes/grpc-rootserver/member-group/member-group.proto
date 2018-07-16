@@ -1,0 +1,24 @@
+syntax = 'proto3';
+
+package membergroup;
+
+message Member {
+    string name = 1;
+    string ip = 2;
+    string port = 3;
+    bool leader = 4;
+}
+
+message MemberList {
+    // creates a slice of Member
+    repeated Member member = 1;
+}
+
+// Empty message type used for List method
+message Void {}
+
+// Service definition for gRPC plugin
+service Members {
+    rpc List(Void) returns (MemberList) {}
+    rpc Register(Member) returns (Member) {}
+}

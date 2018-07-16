@@ -86,6 +86,8 @@ func send(g *gocui.Gui, v *gocui.View) error {
 		log.Fatal(err)
 	}
 
+	// Send message to other clients
+
 	return nil
 }
 

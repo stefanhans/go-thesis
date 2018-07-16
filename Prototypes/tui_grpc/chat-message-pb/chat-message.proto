@@ -1,0 +1,22 @@
+syntax = 'proto3';
+
+package chatmessage;
+
+message ChatMessage {
+    string text = 1;
+    string from = 2;
+}
+
+message ChatMessageList {
+    // creates a slice of ChatMessage
+    repeated ChatMessage chatmessages = 1;
+}
+
+// Empty message type used for Read method
+message Void {}
+
+// Service definition for gRPC plugin
+service ChatMessages {
+    rpc Read(Void) returns (ChatMessageList) {}
+    rpc Write(ChatMessage) returns (ChatMessage) {}
+}

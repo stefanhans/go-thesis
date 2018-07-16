@@ -32,7 +32,7 @@ func main() {
 	case "read":
 		err = read(context.Background(), client)
 	case "write":
-		if flag.NArg() < 4 {
+		if flag.NArg() < 3 {
 			fmt.Fprintln(os.Stderr, "missing parameter: write <from> <text>...")
 			os.Exit(1)
 		}

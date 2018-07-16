@@ -1,0 +1,20 @@
+syntax = 'proto3';
+
+package display;
+
+message Sender {
+    string name = 1;
+    string ip = 2;
+    string port = 3;
+    bool leader = 4;
+}
+
+message Tweet {
+    Sender  sender = 1;
+    string  text = 2;
+}
+
+// Service definition for gRPC plugin
+service DisplayTweets {
+    rpc Display(Tweet) returns (Tweet) {}
+}
