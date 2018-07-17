@@ -1,0 +1,31 @@
+syntax = 'proto3';
+
+package subscribergroup;
+
+message Subscriber {
+    string name = 1;
+    string ip = 2;
+    string port = 3;
+}
+
+message SubscriberList {
+    // creates a slice of Subscriber
+    repeated Subscriber subscriber = 1;
+}
+
+// TODO: Rename to Message
+message Tweet {
+    Subscriber  sender = 1;
+    string      text = 2;
+}
+
+// Empty message type used for List method
+message Void {}
+
+// Service definition for gRPC plugin
+service Subscribers {
+    rpc List(Void) returns (SubscriberList) {}
+    rpc Subscribe(Subscriber) returns (Subscriber) {}
+    rpc Unsubscribe(Subscriber) returns (Subscriber) {}
+    rpc Send(Tweet) returns (SubscriberList) {}
+}

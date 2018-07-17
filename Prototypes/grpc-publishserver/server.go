@@ -82,9 +82,6 @@ func (s subscriberServer) Send(ctx context.Context, tweet *subscribergroup.Tweet
 		if recipient.Name != sender.Name {
 			fmt.Printf("Send: %q from sender %s to recipient %s (%s:%s)\n", tweet.Text, sender.Name, recipient.Name, recipient.Ip, recipient.Port)
 
-
-
-
 			// Create client with insecure connection
 			conn, err := grpc.Dial(":" + recipient.Port, grpc.WithInsecure())
 			if err != nil {
