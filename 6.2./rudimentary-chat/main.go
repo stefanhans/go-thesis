@@ -4,11 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"strings"
 
-	"bitbucket.org/stefanhans/go-thesis/6.2./rudimentary-chat/subscriber"
 	"bitbucket.org/stefanhans/go-thesis/6.2./rudimentary-chat/subscriber-group"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -35,45 +33,29 @@ func main() {
 			os.Exit(1)
 		}
 
-		// Create and register server
-		srv := grpc.NewServer()
-
-		// Register server for subscribergroup
-		var subscribers subscriberServer
-		subscribergroup.RegisterSubscribersServer(srv, subscribers)
-
-		// Create listener
-		l, err := net.Listen("tcp", ":"+flag.Arg(2))
-		fmt.Printf("subscriber-group server does listen on %s:%s\n", flag.Arg(1), flag.Arg(2))
+		err = startServerServer(flag.Arg(1), flag.Arg(2))
 		if err != nil {
-			log.Fatal("could not listen to %s:%s: \v", flag.Arg(1), flag.Arg(2), err)
+			log.Fatal("startServerServer: %v\n", err)
 		}
-		// Serve via listener
-		log.Fatal(srv.Serve(l))
 
 	case "client":
 		// Check command args
 		flag.Parse()
-		if flag.NArg() < 3 {
-			fmt.Fprintln(os.Stderr, "missing parameter: client <ip> <port>")
+		if flag.NArg() < 4 {
+			fmt.Fprintln(os.Stderr, "missing parameter: client <name> <ip> <port>")
 			os.Exit(1)
 		}
 
-		// Create and register server
-		srv := grpc.NewServer()
-
-		// Register server for tweets
-		var tweets displayServer
-		subscriber.RegisterDisplayMessagesServer(srv, tweets)
-
-		// Create listener
-		l, err := net.Listen("tcp", ":"+flag.Arg(2))
-		fmt.Printf("Subscriber does listen on %s:%s\n", flag.Arg(1), flag.Arg(2))
+		err = subscribeClient(flag.Arg(1), flag.Arg(2), flag.Arg(3))
 		if err != nil {
-			log.Fatal("could not listen to %s:%s: \v", flag.Arg(1), flag.Arg(2), err)
+			log.Fatal("subscribeClient: %v\n", err)
 		}
-		// Serve via listener
-		log.Fatal(srv.Serve(l))
+		fmt.Printf("Client %q (%s:%s) has subscribed\n", flag.Arg(1), flag.Arg(2), flag.Arg(3))
+
+		err = startClientServer(flag.Arg(1), flag.Arg(2), flag.Arg(3))
+		if err != nil {
+			log.Fatal("startClientServer: %v\n", err)
+		}
 
 	case "list":
 		// Create client with insecure connection
@@ -86,54 +68,45 @@ func main() {
 		err = list(context.Background(), client)
 
 	case "subscribe":
-		// Create client with insecure connection
-		conn, err := grpc.Dial(":8888", grpc.WithInsecure())
-		if err != nil {
-			log.Fatal("could not connect to backend: %v", err)
-		}
-		client := subscribergroup.NewSubscribersClient(conn)
 
 		if flag.NArg() < 3 {
 			fmt.Fprintln(os.Stderr, "missing parameter: subscribe <name> <ip> <port>")
 			os.Exit(2)
 		}
-		err = subscribe(context.Background(), client, flag.Arg(1), flag.Arg(2), flag.Arg(3))
 
+		err = subscribeClient(flag.Arg(1), flag.Arg(2), flag.Arg(3))
+		if err != nil {
+			log.Fatal("subscribeClient: %v\n", err)
+		}
 
 	case "unsubscribe":
-		// Create client with insecure connection
-		conn, err := grpc.Dial(":8888", grpc.WithInsecure())
-		if err != nil {
-			log.Fatal("could not connect to backend: %v", err)
-		}
-		client := subscribergroup.NewSubscribersClient(conn)
 
-		if flag.NArg() < 2 {
+		if flag.NArg() < 1 {
 			fmt.Fprintln(os.Stderr, "missing parameter: unsubscribe <name>")
 			os.Exit(2)
 		}
-		err = unsubscribe(context.Background(), client, flag.Arg(1))
+
+		err = unsubscribeClient(flag.Arg(1))
+		if err != nil {
+			log.Fatal("unsubscribeClient: %v\n", err)
+		}
 
 	case "send":
-		// Create client with insecure connection
-		conn, err := grpc.Dial(":8888", grpc.WithInsecure())
-		if err != nil {
-			log.Fatal("could not connect to backend: %v", err)
-		}
-		client := subscribergroup.NewSubscribersClient(conn)
 
-		if flag.NArg() < 4 {
-			fmt.Fprintln(os.Stderr, "missing parameter: send <name> <ip> <port> <text>...")
+		if flag.NArg() < 2 {
+			fmt.Fprintln(os.Stderr, "missing parameter: send <name> <text>...")
 			os.Exit(1)
 		}
-		sender := &subscribergroup.Subscriber{Name: flag.Arg(1), Ip: flag.Arg(2), Port: flag.Arg(3)}
-		err = send(context.Background(), client, sender, strings.Join(flag.Args()[4:], " "))
+
+		err = sendMessage(flag.Arg(1), strings.Join(flag.Args()[2:], " "))
+		if err != nil {
+			log.Fatal("sendMessage: %v\n", err)
+		}
 
 	default:
 		err = fmt.Errorf("unknown subcommand %s", cmd)
-	}
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		if err != nil {
+			log.Fatal("%v\n", err)
+		}
 	}
 }

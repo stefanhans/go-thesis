@@ -12,7 +12,7 @@ type displayServer struct{}
 
 func (ds displayServer) DisplayText(ctx context.Context, message *subscriber.Message) (*subscriber.Message, error) {
 
-	fmt.Printf("%s (%s:%s): %q\n", message.Sender.Name, message.Sender.Ip, message.Sender.Port, message.Text)
+	fmt.Printf("%s: %q\n", message.Sender.Name, message.Text)
 
 	return message, nil
 }
@@ -30,7 +30,6 @@ func (ds displayServer) DisplayUnsubscribe(ctx context.Context, subscr *subscrib
 
 	return subscr, nil
 }
-
 
 // Subscribe wrapper function
 func subscribe(ctx context.Context, client subscribergroup.SubscribersClient, name string, ip string, port string) error {

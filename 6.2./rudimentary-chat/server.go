@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
+	"strings"
+
 	"bitbucket.org/stefanhans/go-thesis/6.2./rudimentary-chat/subscriber"
 	"bitbucket.org/stefanhans/go-thesis/6.2./rudimentary-chat/subscriber-group"
 	"golang.org/x/net/context"
@@ -13,6 +16,86 @@ var (
 	subscriberlist subscribergroup.SubscriberList
 )
 
+func startServerServer(ip string, port string) error {
+
+	// Create and register server
+	srv := grpc.NewServer()
+
+	// Register server for subscribergroup
+	var subscribers subscriberServer
+	subscribergroup.RegisterSubscribersServer(srv, subscribers)
+
+	// Create listener
+	l, err := net.Listen("tcp", ":"+port)
+	fmt.Printf("subscriber-group server does listen on %s:%s\n", ip, port)
+	if err != nil {
+		return fmt.Errorf("could not listen to %s:%s: \v", ip, port, err)
+	}
+	// Serve via listener
+	return srv.Serve(l)
+}
+
+func startClientServer(name string, ip string, port string) error {
+
+	// Create and register server
+	srv := grpc.NewServer()
+
+	// Register server for messages
+	var messageServer displayServer
+	subscriber.RegisterDisplayMessagesServer(srv, messageServer)
+
+	// Create listener
+	l, err := net.Listen("tcp", ":"+port)
+	fmt.Printf("Subscriber %q does listen on %s:%s\n", name, ip, port)
+	if err != nil {
+		return fmt.Errorf("%q could not listen to %s:%s: %v\n", name, ip, port, err)
+	}
+	// Serve via listener
+	return srv.Serve(l)
+}
+
+func subscribeClient(name string, ip string, port string) error {
+
+	client, err := dialServer()
+	if err != nil {
+		return err
+	}
+
+	return subscribe(context.Background(), client, name, ip, port)
+}
+
+func unsubscribeClient(name string) error {
+
+	client, err := dialServer()
+	if err != nil {
+		return err
+	}
+
+	return unsubscribe(context.Background(), client, name)
+}
+
+func sendMessage(name string, text ...string) error {
+
+	client, err := dialServer()
+	if err != nil {
+		return err
+	}
+	sender := &subscribergroup.Subscriber{Name: name}
+
+	return send(context.Background(), client, sender, strings.Join(text[:], " "))
+
+}
+
+func dialServer() (subscribergroup.SubscribersClient, error) {
+
+	// Create client with insecure connection
+	conn, err := grpc.Dial(":8888", grpc.WithInsecure())
+	if err != nil {
+		return nil, fmt.Errorf("could not connect to backend: %v", err)
+	}
+	return subscribergroup.NewSubscribersClient(conn), nil
+}
+
 // Receiver for implementing the server service interface Subscribers
 type subscriberServer struct{}
 
@@ -20,7 +103,6 @@ type subscriberServer struct{}
 func (s subscriberServer) Subscribe(ctx context.Context, subscr *subscribergroup.Subscriber) (*subscribergroup.Subscriber, error) {
 	fmt.Printf("SUBSCRIBE: %v\n", subscr)
 	subscriberlist.Subscriber = append(subscriberlist.Subscriber, subscr)
-
 
 	for _, recipient := range subscriberlist.Subscriber {
 		//fmt.Printf("Check recipient: %v\n", recipient)
@@ -102,12 +184,6 @@ func (s subscriberServer) Send(ctx context.Context, tweet *subscribergroup.Tweet
 			source := subscriber.Sender{Name: sender.Name, Ip: sender.Ip, Port: sender.Port}
 			tweet := subscriber.Message{Sender: &source, Text: tweet.Text}
 
-			//err = show(context.Background(), client, &tweet)
-			//if err != nil {
-			//	fmt.Fprintln(os.Stderr, err)
-			//	os.Exit(1)
-			//}
-
 			_, err = client.DisplayText(ctx, &tweet)
 			if err != nil {
 				return nil, fmt.Errorf("could not display tweet: %v", err)
@@ -116,14 +192,3 @@ func (s subscriberServer) Send(ctx context.Context, tweet *subscribergroup.Tweet
 	}
 	return &subscriberlist, nil
 }
-
-// Tweet wrapper function
-//func show(ctx context.Context, client subscriber.DisplayMessagesClient, message *subscriber.Message) error {
-//
-//	// Write to gRPC client
-//	_, err := client.DisplayText(ctx, message)
-//	if err != nil {
-//		return fmt.Errorf("could not display tweet: %v", err)
-//	}
-//	return nil
-//}
