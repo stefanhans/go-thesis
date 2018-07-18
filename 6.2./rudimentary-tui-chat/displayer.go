@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"bitbucket.org/stefanhans/go-thesis/6.2./rudimentary-chat/chat-group"
+	"bitbucket.org/stefanhans/go-thesis/6.2./rudimentary-tui-chat/chat-group"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -38,12 +38,6 @@ type displayServer struct{}
 
 func (ds displayServer) DisplayText(ctx context.Context, message *chatgroup.Message) (*chatgroup.Message, error) {
 
-	//fmt.Printf("%s: %q\n", message.Sender.Name, message.Text)
-	//messagesView, _ := clientGui.View("messages")
-	//clientGui.Update(func(g *gocui.Gui) error {
-	//	fmt.Fprintln(messagesView, fmt.Sprintf("%s: %s", message.Sender.Name, message.Text))
-	//	return nil
-	//})
 	displayText(fmt.Sprintf("%s: %s", message.Sender.Name, message.Text))
 
 	return message, nil
@@ -51,7 +45,6 @@ func (ds displayServer) DisplayText(ctx context.Context, message *chatgroup.Mess
 
 func (ds displayServer) DisplaySubscription(ctx context.Context, subscr *chatgroup.Member) (*chatgroup.Member, error) {
 
-	//fmt.Printf("<%s (%s:%s) has joined>\n", subscr.Name, subscr.Ip, subscr.Port)
 	displayText(fmt.Sprintf("<%s (%s:%s) has joined>", subscr.Name, subscr.Ip, subscr.Port))
 
 	return subscr, nil
@@ -59,7 +52,6 @@ func (ds displayServer) DisplaySubscription(ctx context.Context, subscr *chatgro
 
 func (ds displayServer) DisplayUnsubscription(ctx context.Context, subscr *chatgroup.Member) (*chatgroup.Member, error) {
 
-	//fmt.Printf("<%s has left>\n", subscr.Name)
 	displayText(fmt.Sprintf("<%s has left>", subscr.Name))
 
 	return subscr, nil

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"bitbucket.org/stefanhans/go-thesis/6.2./rudimentary-chat/chat-group"
+	"bitbucket.org/stefanhans/go-thesis/6.2./rudimentary-tui-chat/chat-group"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -86,7 +86,7 @@ func sendMessage(name string, text ...string) error {
 func dialPublisher() (chatgroup.PublisherClient, error) {
 
 	// Create client with insecure connection
-	conn, err := grpc.Dial(":8888", grpc.WithInsecure())
+	conn, err := grpc.Dial(":"+serverPort, grpc.WithInsecure())
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to backend: %v", err)
 	}

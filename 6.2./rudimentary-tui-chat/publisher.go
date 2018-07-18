@@ -5,7 +5,7 @@ import (
 	"log"
 	"net"
 
-	"bitbucket.org/stefanhans/go-thesis/6.2./rudimentary-chat/chat-group"
+	"bitbucket.org/stefanhans/go-thesis/6.2./rudimentary-tui-chat/chat-group"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -14,7 +14,14 @@ var (
 	memberlist chatgroup.MemberList
 )
 
-func startPublisher(ip string, port string) error {
+func startPublisher(ip string, port string, foreground bool) error {
+
+	// Create listener
+	l, err := net.Listen("tcp", ":"+port)
+	fmt.Printf("chat-group server does listen on %s:%s\n", ip, port)
+	if err != nil {
+		return fmt.Errorf("could not listen to %s:%s: %v\n", ip, port, err)
+	}
 
 	// Create and register server
 	srv := grpc.NewServer()
@@ -23,14 +30,14 @@ func startPublisher(ip string, port string) error {
 	var publisher publishServer
 	chatgroup.RegisterPublisherServer(srv, publisher)
 
-	// Create listener
-	l, err := net.Listen("tcp", ":"+port)
-	fmt.Printf("chat-group server does listen on %s:%s\n", ip, port)
-	if err != nil {
-		return fmt.Errorf("could not listen to %s:%s: \v", ip, port, err)
+	if foreground {
+		return srv.Serve(l)
+	} else {
+		go func() {
+			srv.Serve(l)
+		}()
+		return nil
 	}
-	// Serve via listener
-	return srv.Serve(l)
 }
 
 // Receiver for implementing the server service interface Subscribers
@@ -38,7 +45,9 @@ type publishServer struct{}
 
 // Server's Subscribe implementation
 func (s publishServer) Subscribe(ctx context.Context, subscr *chatgroup.Member) (*chatgroup.Member, error) {
-	fmt.Printf("SUBSCRIBE: %v\n", subscr)
+	if isServer {
+		fmt.Printf("SUBSCRIBE: %v\n", subscr)
+	}
 	memberlist.Member = append(memberlist.Member, subscr)
 
 	for _, recipient := range memberlist.Member {
@@ -67,7 +76,9 @@ func (s publishServer) Subscribe(ctx context.Context, subscr *chatgroup.Member) 
 
 // Server's Subscribe implementation
 func (s publishServer) Unsubscribe(ctx context.Context, subscr *chatgroup.Member) (*chatgroup.Member, error) {
-	fmt.Printf("UNSUBSCRIBE: %v\n", subscr)
+	if isServer {
+		fmt.Printf("UNSUBSCRIBE: %v\n", subscr)
+	}
 
 	for i, s := range memberlist.Member {
 		if s.Name == subscr.Name {
@@ -95,20 +106,26 @@ func (s publishServer) Unsubscribe(ctx context.Context, subscr *chatgroup.Member
 
 // Server's List implementation
 func (s publishServer) ListSubscriber(ctx context.Context, void *chatgroup.Void) (*chatgroup.MemberList, error) {
-	fmt.Printf("LIST: %v\n", memberlist)
+	if isServer {
+		fmt.Printf("LIST: %v\n", memberlist)
+	}
 
 	return &memberlist, nil
 }
 
 // Server's Send implementation
 func (s publishServer) Publish(ctx context.Context, message *chatgroup.Message) (*chatgroup.MemberList, error) {
-	fmt.Printf("PUBLISH: %v\n", message)
+	if isServer {
+		fmt.Printf("PUBLISH: %v\n", message)
+	}
 	sender := message.Sender
 
 	for _, recipient := range memberlist.Member {
 		//fmt.Printf("Check recipient: %v\n", recipient)
 		if recipient.Name != sender.Name {
-			fmt.Printf("From %s to %s (%s:%s): %q\n", sender.Name, recipient.Name, recipient.Ip, recipient.Port, message.Text)
+			if isServer {
+				fmt.Printf("From %s to %s (%s:%s): %q\n", sender.Name, recipient.Name, recipient.Ip, recipient.Port, message.Text)
+			}
 
 			// Create client with insecure connection
 			conn, err := grpc.Dial(":"+recipient.Port, grpc.WithInsecure())
