@@ -1,19 +1,25 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"strings"
 
 	"github.com/jroimartin/gocui"
+)
+
+var (
+	clientGui *gocui.Gui
 )
 
 // Content to be displayed in the GUI
 func layout(g *gocui.Gui) error {
 
 	// Get size of the terminal
-	maxX, maxY := g.Size()
+	maxX, maxY := clientGui.Size()
 
 	// Creates view "messages"
-	if messages, err := g.SetView("messages", 0, 0, maxX-1, maxY-3); err != nil {
+	if messages, err := clientGui.SetView("messages", 0, 0, maxX-1, maxY-3); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -22,7 +28,7 @@ func layout(g *gocui.Gui) error {
 	}
 
 	// Creates view "input"
-	if input, err := g.SetView("input", 0, maxY-4, maxX-1, maxY-1); err != nil {
+	if input, err := clientGui.SetView("input", 0, maxY-4, maxX-1, maxY-1); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -31,18 +37,19 @@ func layout(g *gocui.Gui) error {
 	}
 
 	// Set view "input" as the current view with focus and cursor
-	if _, err := g.SetCurrentView("input"); err != nil {
+	if _, err := clientGui.SetCurrentView("input"); err != nil {
 		return err
 	}
 
 	// Show cursor
-	g.Cursor = true
+	clientGui.Cursor = true
 
 	return nil
 }
 
 // Quit the GUI
 func quit(g *gocui.Gui, v *gocui.View) error {
+	unsubscribeClient(memberName)
 	return gocui.ErrQuit
 }
 
@@ -50,10 +57,11 @@ func quit(g *gocui.Gui, v *gocui.View) error {
 func send(g *gocui.Gui, v *gocui.View) error {
 
 	// Get the top window view and write the buffer of the bottom window view to it
-	if m, err := g.View("messages"); err != nil {
+	if m, err := clientGui.View("messages"); err != nil {
 		log.Fatal(err)
 	} else {
-		m.Write([]byte(v.Buffer()))
+		sendMessage(memberName, strings.Trim(v.Buffer(), "\n"))
+		m.Write([]byte(fmt.Sprintf("%s: %s", memberName, v.Buffer())))
 	}
 
 	// Clear the bottom window and reset the cursor
@@ -65,22 +73,33 @@ func send(g *gocui.Gui, v *gocui.View) error {
 	return nil
 }
 
-func main() {
+func startTui() error {
+	var err error
 
 	// Create the terminal GUI
-	g, err := gocui.NewGui(gocui.OutputNormal)
+	clientGui, err = gocui.NewGui(gocui.OutputNormal)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("could start tui: %v\n", err)
 	}
-	defer g.Close()
+	defer clientGui.Close()
 
 	// Set function to manage all views and keybindings
-	g.SetManagerFunc(layout)
+	clientGui.SetManagerFunc(layout)
 
 	// Bind keys with functions
-	g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit)
-	g.SetKeybinding("input", gocui.KeyEnter, gocui.ModNone, send)
+	clientGui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit)
+	clientGui.SetKeybinding("input", gocui.KeyEnter, gocui.ModNone, send)
 
 	// Start main event loop of the GUI
-	g.MainLoop()
+	return clientGui.MainLoop()
+}
+
+func displayText(txt string) error {
+
+	messagesView, _ := clientGui.View("messages")
+	clientGui.Update(func(g *gocui.Gui) error {
+		fmt.Fprintln(messagesView, txt)
+		return nil
+	})
+	return nil
 }
