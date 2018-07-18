@@ -6,10 +6,12 @@ import (
 	"log"
 	"os"
 	"strings"
+)
 
-	"bitbucket.org/stefanhans/go-thesis/6.2./rudimentary-chat/subscriber-group"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
+var (
+	memberName string
+	memberIp   string
+	memberPort string
 )
 
 func main() {
@@ -17,7 +19,7 @@ func main() {
 	// Check command args
 	flag.Parse()
 	if flag.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, "missing subcommand: server or client")
+		fmt.Fprintln(os.Stderr, "missing subcommand: server, client, list, subscribe, unsubscribe, or send")
 		os.Exit(1)
 	}
 
@@ -29,13 +31,13 @@ func main() {
 		// Check command args
 		flag.Parse()
 		if flag.NArg() < 3 {
-			fmt.Fprintln(os.Stderr, "missing parameter: <ip> <port>")
+			fmt.Fprintln(os.Stderr, "missing parameter: server <ip> <port>")
 			os.Exit(1)
 		}
 
-		err = startServerServer(flag.Arg(1), flag.Arg(2))
+		err = startPublisher(flag.Arg(1), flag.Arg(2))
 		if err != nil {
-			log.Fatal("startServerServer: %v\n", err)
+			log.Fatal("startPublisher: %v\n", err)
 		}
 
 	case "client":
@@ -45,27 +47,26 @@ func main() {
 			fmt.Fprintln(os.Stderr, "missing parameter: client <name> <ip> <port>")
 			os.Exit(1)
 		}
+		memberName = flag.Arg(1)
+		memberIp = flag.Arg(2)
+		memberPort = flag.Arg(3)
 
-		err = subscribeClient(flag.Arg(1), flag.Arg(2), flag.Arg(3))
+		err = subscribeClient(memberName, memberIp, memberPort)
 		if err != nil {
 			log.Fatal("subscribeClient: %v\n", err)
 		}
-		fmt.Printf("Client %q (%s:%s) has subscribed\n", flag.Arg(1), flag.Arg(2), flag.Arg(3))
+		fmt.Printf("Client %q (%s:%s) has subscribed\n", memberName, memberIp, memberPort)
 
-		err = startClientServer(flag.Arg(1), flag.Arg(2), flag.Arg(3))
+		err = startDisplayer(memberName, memberIp, memberPort)
 		if err != nil {
-			log.Fatal("startClientServer: %v\n", err)
+			log.Fatal("startDisplayer: %v\n", err)
 		}
 
 	case "list":
-		// Create client with insecure connection
-		conn, err := grpc.Dial(":8888", grpc.WithInsecure())
+		err = listMembers()
 		if err != nil {
-			log.Fatal("could not connect to backend: %v", err)
+			log.Fatal("listMembers: %v\n", err)
 		}
-		client := subscribergroup.NewSubscribersClient(conn)
-
-		err = list(context.Background(), client)
 
 	case "subscribe":
 
