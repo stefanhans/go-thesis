@@ -8,11 +8,13 @@ import (
 	"strings"
 )
 
+// publishing service on a commonly known address
 const (
 	serverIp	string = "localhost"
 	serverPort	string = "22365"
 )
 
+// client identity set by command args
 var (
 	memberName string
 	memberIp   string

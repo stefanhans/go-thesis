@@ -8,28 +8,38 @@ import (
 	"bitbucket.org/stefanhans/go-thesis/6.2./rudimentary-tui-chat/chat-group"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"strings"
+	"syscall"
 )
 
 var (
 	memberlist chatgroup.MemberList
 )
 
+// Start publisher service to provide member registration and message publishing
 func startPublisher(ip string, port string, foreground bool) error {
 
 	// Create listener
 	l, err := net.Listen("tcp", ":"+port)
-	fmt.Printf("chat-group server does listen on %s:%s\n", ip, port)
-	if err != nil {
-		return fmt.Errorf("could not listen to %s:%s: %v\n", ip, port, err)
+
+	// Exit application on unexpected error
+	if err != nil && ! strings.Contains(err.Error(), syscall.EADDRINUSE.Error()) {
+		log.Fatalf("could not listen to %s:%s: %v\n", ip, port, err)
 	}
 
-	// Create and register server
+	// Do not start publisher on "address already in use"
+	if err != nil {
+		return err
+	}
+
+	// Create gRPC server
 	srv := grpc.NewServer()
 
-	// Register server for Publisher
+	// Register Publisher
 	var publisher publishServer
 	chatgroup.RegisterPublisherServer(srv, publisher)
 
+	// Start gRPC server in fore- or background respectively
 	if foreground {
 		return srv.Serve(l)
 	} else {
@@ -48,6 +58,7 @@ func (s publishServer) Subscribe(ctx context.Context, subscr *chatgroup.Member) 
 	if isServer {
 		fmt.Printf("SUBSCRIBE: %v\n", subscr)
 	}
+	//todo: check for uniquness of member
 	memberlist.Member = append(memberlist.Member, subscr)
 
 	for _, recipient := range memberlist.Member {

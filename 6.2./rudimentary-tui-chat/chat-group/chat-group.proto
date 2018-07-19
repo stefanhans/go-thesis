@@ -9,7 +9,6 @@ message Member {
 }
 
 message MemberList {
-    // creates a slice of Member
     repeated Member member = 1;
 }
 
@@ -18,7 +17,7 @@ message Message {
     string  text = 2;
 }
 
-// Empty message type used for List method
+// Empty message type used for ListSubscriber method
 message Void {}
 
 // Service definition for gRPC plugin to publish messages and handle subscriptions
