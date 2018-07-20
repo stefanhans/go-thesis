@@ -5,9 +5,16 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
+	"time"
 )
 
+// Publishing service on a commonly known address
+const (
+	serverIp   string = "localhost"
+	serverPort string = "22365"
+)
+
+// Identity set by command args
 var (
 	memberName string
 	memberIp   string
@@ -16,98 +23,49 @@ var (
 
 func main() {
 
-	// Check command args
+	// Check command args and set identity
 	flag.Parse()
-	if flag.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, "missing subcommand: server, client, list, subscribe, unsubscribe, or send")
+	if flag.NArg() < 3 {
+		fmt.Fprintln(os.Stderr, "missing parameter: <name> <ip> <port>")
 		os.Exit(1)
 	}
+	memberName = flag.Arg(0)
+	memberIp = flag.Arg(1)
+	memberPort = flag.Arg(2)
 
-	// Switch subcommands and call wrapper function
-	var err error
-	switch cmd := flag.Arg(0); cmd {
-	case "server":
+	// Prepare logfile for logging
+	year, month, day := time.Now().Date()
+	hour, minute, second := time.Now().Clock()
+	logfilename := fmt.Sprintf("rudimentary-chat-%s-%v%02d%02d%02d%02d%02d.log", memberName,
+		year, int(month), int(day), int(hour), int(minute), int(second))
 
-		// Check command args
-		flag.Parse()
-		if flag.NArg() < 3 {
-			fmt.Fprintln(os.Stderr, "missing parameter: server <ip> <port>")
-			os.Exit(1)
-		}
+	f, err := os.OpenFile(logfilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening logfile %v: %v", logfilename, err)
+	}
+	defer f.Close()
 
-		err = startPublisher(flag.Arg(1), flag.Arg(2))
-		if err != nil {
-			log.Fatal("startPublisher: %v\n", err)
-		}
+	// Switch logging to logfile
+	log.SetOutput(f)
 
-	case "client":
-		// Check command args
-		flag.Parse()
-		if flag.NArg() < 4 {
-			fmt.Fprintln(os.Stderr, "missing parameter: client <name> <ip> <port>")
-			os.Exit(1)
-		}
-		memberName = flag.Arg(1)
-		memberIp = flag.Arg(2)
-		memberPort = flag.Arg(3)
+	// Start publishing service, if not running already
+	startPublisher(serverIp, serverPort)
 
-		err = subscribeClient(memberName, memberIp, memberPort)
-		if err != nil {
-			log.Fatal("subscribeClient: %v\n", err)
-		}
-		fmt.Printf("Client %q (%s:%s) has subscribed\n", memberName, memberIp, memberPort)
+	// Subscribe client to publisher
+	err = Subscribe(memberName, memberIp, memberPort)
+	if err != nil {
+		log.Fatalf("Subscribe: %v", err)
+	}
 
-		err = startDisplayer(memberName, memberIp, memberPort)
-		if err != nil {
-			log.Fatal("startDisplayer: %v\n", err)
-		}
+	// Start displaying service for text-based UI
+	err = startDisplayer(memberName, memberIp, memberPort)
+	if err != nil {
+		log.Fatalf("startDisplayer: %v", err)
+	}
 
-	case "list":
-		err = listMembers()
-		if err != nil {
-			log.Fatal("listMembers: %v\n", err)
-		}
-
-	case "subscribe":
-
-		if flag.NArg() < 3 {
-			fmt.Fprintln(os.Stderr, "missing parameter: subscribe <name> <ip> <port>")
-			os.Exit(2)
-		}
-
-		err = subscribeClient(flag.Arg(1), flag.Arg(2), flag.Arg(3))
-		if err != nil {
-			log.Fatal("subscribeClient: %v\n", err)
-		}
-
-	case "unsubscribe":
-
-		if flag.NArg() < 1 {
-			fmt.Fprintln(os.Stderr, "missing parameter: unsubscribe <name>")
-			os.Exit(2)
-		}
-
-		err = unsubscribeClient(flag.Arg(1))
-		if err != nil {
-			log.Fatal("unsubscribeClient: %v\n", err)
-		}
-
-	case "send":
-
-		if flag.NArg() < 2 {
-			fmt.Fprintln(os.Stderr, "missing parameter: send <name> <text>...")
-			os.Exit(1)
-		}
-
-		err = sendMessage(flag.Arg(1), strings.Join(flag.Args()[2:], " "))
-		if err != nil {
-			log.Fatal("sendMessage: %v\n", err)
-		}
-
-	default:
-		err = fmt.Errorf("unknown subcommand %s", cmd)
-		if err != nil {
-			log.Fatal("%v\n", err)
-		}
+	// Start text-based UI
+	err = runTUI()
+	if err != nil {
+		log.Fatalf("runTUI: %v", err)
 	}
 }

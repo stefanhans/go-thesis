@@ -24,12 +24,6 @@ func main() {
 		Leader: false,
 	}
 
-
-
-
-
-
-
 	// Create listener
 	conn, err := net.Dial("udp", "localhost:22365")
 	if err != nil {
@@ -57,4 +51,3 @@ func main() {
 
 	conn.Close()
 }
-

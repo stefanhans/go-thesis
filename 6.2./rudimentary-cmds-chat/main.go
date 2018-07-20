@@ -8,18 +8,10 @@ import (
 	"strings"
 )
 
-// publishing service on a commonly known address
-const (
-	serverIp   string = "localhost"
-	serverPort string = "22365"
-)
-
-// client identity set by command args
 var (
 	memberName string
 	memberIp   string
 	memberPort string
-	isServer   bool
 )
 
 func main() {
@@ -42,9 +34,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, "missing parameter: server <ip> <port>")
 			os.Exit(1)
 		}
-		isServer = true
 
-		startPublisher(flag.Arg(1), flag.Arg(2), isServer)
+		err = startPublisher(flag.Arg(1), flag.Arg(2))
+		if err != nil {
+			log.Fatal("startPublisher: %v\n", err)
+		}
 
 	case "client":
 		// Check command args
@@ -56,31 +50,22 @@ func main() {
 		memberName = flag.Arg(1)
 		memberIp = flag.Arg(2)
 		memberPort = flag.Arg(3)
-		isServer = false
-
-		startPublisher(serverIp, serverPort, isServer)
 
 		err = subscribeClient(memberName, memberIp, memberPort)
 		if err != nil {
-			log.Fatalf("subscribeClient: %v", err)
+			log.Fatal("subscribeClient: %v\n", err)
 		}
 		fmt.Printf("Client %q (%s:%s) has subscribed\n", memberName, memberIp, memberPort)
 
 		err = startDisplayer(memberName, memberIp, memberPort)
 		if err != nil {
-			log.Fatalf("startDisplayer: %v", err)
+			log.Fatal("startDisplayer: %v\n", err)
 		}
-
-		err = startTui()
-		if err != nil {
-			log.Fatalf("startTui: %v", err)
-		}
-		displayText(fmt.Sprintf("<%s (%s:%s) has joined>", memberName, memberIp, memberPort))
 
 	case "list":
 		err = listMembers()
 		if err != nil {
-			log.Fatalf("listMembers: %v", err)
+			log.Fatal("listMembers: %v\n", err)
 		}
 
 	case "subscribe":
@@ -92,7 +77,7 @@ func main() {
 
 		err = subscribeClient(flag.Arg(1), flag.Arg(2), flag.Arg(3))
 		if err != nil {
-			log.Fatalf("subscribeClient: %v", err)
+			log.Fatal("subscribeClient: %v\n", err)
 		}
 
 	case "unsubscribe":
@@ -104,7 +89,7 @@ func main() {
 
 		err = unsubscribeClient(flag.Arg(1))
 		if err != nil {
-			log.Fatalf("unsubscribeClient: %v", err)
+			log.Fatal("unsubscribeClient: %v\n", err)
 		}
 
 	case "send":
@@ -116,13 +101,13 @@ func main() {
 
 		err = sendMessage(flag.Arg(1), strings.Join(flag.Args()[2:], " "))
 		if err != nil {
-			log.Fatalf("sendMessage: %v", err)
+			log.Fatal("sendMessage: %v\n", err)
 		}
 
 	default:
 		err = fmt.Errorf("unknown subcommand %s", cmd)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("%v\n", err)
 		}
 	}
 }

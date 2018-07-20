@@ -9,86 +9,66 @@ import (
 	"google.golang.org/grpc"
 )
 
-func listMembers() error {
+// Wrapper for the PublisherClient function Subscribe
+func Subscribe(name string, ip string, port string) error {
 
+	// Create gRPC client connected with gRPC publisher
 	client, err := dialPublisher()
 	if err != nil {
 		return err
 	}
 
-	// List from gRPC client
-	l, err := client.ListSubscriber(context.Background(), &chatgroup.Void{})
-	if err != nil {
-		return fmt.Errorf("could not fetch membergroup: %v", err)
-	}
-
-	// Print members
-	for _, t := range l.Member {
-		fmt.Printf("%s %s %s\n", t.Name, t.Ip, t.Port)
-	}
-
-	return nil
-}
-
-func subscribeClient(name string, ip string, port string) error {
-
-	client, err := dialPublisher()
-	if err != nil {
-		return err
-	}
-
-	// Write to gRPC client
+	// Subscribe via gRPC client
 	_, err = client.Subscribe(context.Background(), &chatgroup.Member{Name: name, Ip: ip, Port: port})
 	if err != nil {
-		return fmt.Errorf("could not add member in the membergroup: %v", err)
+		return fmt.Errorf("could not subscribe to the chatgroup: %v", err)
 	}
 	return nil
 }
 
-func unsubscribeClient(name string) error {
+// Wrapper for the PublisherClient function Unsubscribe
+func Unsubscribe(name string) error {
 
+	// Create gRPC client connected with gRPC publisher
 	client, err := dialPublisher()
 	if err != nil {
 		return err
 	}
 
-	// Write to gRPC client
+	// Unsubscribe via gRPC client
 	_, err = client.Unsubscribe(context.Background(), &chatgroup.Member{Name: name})
 	if err != nil {
-		return fmt.Errorf("could not add member in the membergroup: %v", err)
+		return fmt.Errorf("could not unsubscribe from the chatgroup: %v", err)
 	}
 	return nil
 }
 
-func sendMessage(name string, text ...string) error {
+// Wrapper for the PublisherClient function Publish
+func Publish(name string, text ...string) error {
 
+	// Create gRPC client connected with gRPC publisher
 	client, err := dialPublisher()
 	if err != nil {
 		return err
 	}
 
+	// Prepare message
 	msg := chatgroup.Message{Sender: &chatgroup.Member{Name: name}, Text: strings.Join(text[:], " ")}
 
-	// List from gRPC client
-	l, err := client.Publish(context.Background(), &msg)
+	// Publish via gRPC client
+	_, err = client.Publish(context.Background(), &msg)
 	if err != nil {
-		return fmt.Errorf("could not send to subscribergroup: %v", err)
-	}
-	fmt.Printf("Sent to subscribergroup from %v: %q\n", msg.Sender, msg.Text)
-
-	// Print members
-	for _, t := range l.Member {
-		fmt.Printf("Sent receipt: %s %s %s\n", t.Name, t.Ip, t.Port)
+		return fmt.Errorf("could not publish to the chatgroup: %v", err)
 	}
 	return nil
 }
 
+// Dial gRPC publisher and return gRPC client
 func dialPublisher() (chatgroup.PublisherClient, error) {
 
-	// Create client with insecure connection
-	conn, err := grpc.Dial(":8888", grpc.WithInsecure())
+	conn, err := grpc.Dial(":"+serverPort, grpc.WithInsecure())
 	if err != nil {
-		return nil, fmt.Errorf("could not connect to backend: %v", err)
+		return nil, fmt.Errorf("could not connect to publisher: %v", err)
 	}
 	return chatgroup.NewPublisherClient(conn), nil
 }

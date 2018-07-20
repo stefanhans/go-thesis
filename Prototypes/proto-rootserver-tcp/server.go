@@ -6,8 +6,8 @@ import (
 	"net"
 
 	"bitbucket.org/stefanhans/go-thesis/Prototypes/proto-rootserver-tcp/member-group"
-	_ "github.com/golang/protobuf/proto"
 	"bufio"
+	_ "github.com/golang/protobuf/proto"
 	"io"
 )
 
@@ -18,7 +18,7 @@ func main() {
 	fmt.Printf("%b\n", EOF)
 
 	// Create listener
-	l, err := net.Listen("tcp", ":" + Port)
+	l, err := net.Listen("tcp", ":"+Port)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func handleMembergroupConnection(conn net.Conn) {
 		case Members:
 
 			// Handle the protobuf message: MemberList
-			err := handleMemberListRequest(buf[1:len(buf)-1])
+			err := handleMemberListRequest(buf[1 : len(buf)-1])
 			if err != nil {
 				fmt.Printf("could not handle MemberListMessage from %v: %v", conn, err)
 				return

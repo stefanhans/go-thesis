@@ -7,5 +7,5 @@ const (
 
 const (
 	IpAddr string = "127.0.0.1"
-	Port	string = "22365"
+	Port   string = "22365"
 )

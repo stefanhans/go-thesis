@@ -12,10 +12,10 @@ import (
 
 const (
 	// ReadBytes delimiter
-	EOF           byte = '\x08'
+	EOF byte = '\x08'
 
 	// API
-	Join      = iota
+	Join = iota
 	Members
 	Update
 	Leave

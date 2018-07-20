@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 	"bitbucket.org/stefanhans/go-thesis/Prototypes/grpc-subscriber/display"
 	"flag"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 	}
 
 	// Create client with insecure connection
-	conn, err := grpc.Dial(":" + flag.Arg(0), grpc.WithInsecure())
+	conn, err := grpc.Dial(":"+flag.Arg(0), grpc.WithInsecure())
 	if err != nil {
 		log.Fatal("could not connect to backend: %v", err)
 	}

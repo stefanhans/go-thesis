@@ -8,7 +8,7 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-func handleMemberRequest(data []byte, remoteAddr net.Addr)  ([]byte, error) {
+func handleMemberRequest(data []byte, remoteAddr net.Addr) ([]byte, error) {
 
 	var newMember membergroup.Member
 	if err := proto.Unmarshal(data, &newMember); err != nil {

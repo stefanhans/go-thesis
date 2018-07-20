@@ -10,20 +10,18 @@ import (
 	"os"
 )
 
-
 const (
 	// ReadBytes delimiter
-	EOF           byte = '\x08'
+	EOF byte = '\x08'
 
 	// API
-	Join      = iota
+	Join = iota
 	Members
 	Update
 	Leave
 )
 
 func main() {
-
 
 	// Declare array with protobuffer messages
 	members := &membergroup.MemberList{Member: []*membergroup.Member{&membergroup.Member{
@@ -65,4 +63,3 @@ func main() {
 	conn.Close()
 
 }
-

@@ -7,9 +7,9 @@ import (
 
 	"bitbucket.org/stefanhans/go-thesis/Prototypes/grpc-publishserver/member-group"
 	"bitbucket.org/stefanhans/go-thesis/Prototypes/grpc-publishserver/subscriber-group"
+	"bitbucket.org/stefanhans/go-thesis/Prototypes/grpc-subscriber/display"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"bitbucket.org/stefanhans/go-thesis/Prototypes/grpc-subscriber/display"
 	"os"
 )
 
@@ -32,7 +32,7 @@ func main() {
 
 	// Create listener
 	l, err := net.Listen("tcp", ":8888")
-	fmt.Printf("Publishserver does listen on localhost:8888\n", )
+	fmt.Printf("Publishserver does listen on localhost:8888\n")
 	if err != nil {
 		log.Fatal("could not listen to :8888: \v", err)
 	}
@@ -83,7 +83,7 @@ func (s subscriberServer) Send(ctx context.Context, tweet *subscribergroup.Tweet
 			fmt.Printf("Send: %q from sender %s to recipient %s (%s:%s)\n", tweet.Text, sender.Name, recipient.Name, recipient.Ip, recipient.Port)
 
 			// Create client with insecure connection
-			conn, err := grpc.Dial(":" + recipient.Port, grpc.WithInsecure())
+			conn, err := grpc.Dial(":"+recipient.Port, grpc.WithInsecure())
 			if err != nil {
 				log.Fatal("could not connect to backend: %v", err)
 			}
@@ -119,6 +119,7 @@ func (s subscriberServer) Send(ctx context.Context, tweet *subscribergroup.Tweet
 	}
 	return &subscriberlist, nil
 }
+
 // Tweet wrapper function
 func show(ctx context.Context, client display.DisplayTweetsClient, tweet *display.Tweet) error {
 
