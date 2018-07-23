@@ -13,3 +13,4 @@ message MemberList {
     // creates a slice of Member
     repeated Member member = 1;
 }
+

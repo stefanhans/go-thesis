@@ -15,7 +15,7 @@ var mbStorage []*membergroup.Member
 
 func main() {
 
-	fmt.Printf("%b\n", EOF)
+	fmt.Printf("%b\n", EOT)
 
 	// Create listener
 	l, err := net.Listen("tcp", ":"+Port)
@@ -52,7 +52,7 @@ func handleMembergroupConnection(conn net.Conn) {
 
 	reader := bufio.NewReader(conn)
 	for {
-		buf, err := reader.ReadBytes(EOF)
+		buf, err := reader.ReadBytes(EOT)
 		if err == io.EOF {
 			break
 		}

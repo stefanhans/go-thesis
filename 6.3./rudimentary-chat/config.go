@@ -1,15 +1,18 @@
 package main
 
+
 const (
 	// ReadBytes delimiter 'end of text'
 	EOT byte = '\x03'
 
-	// API-like protocolbuffer messages for UDP and TCP
+	// API-like protocolbuffer messages
 	//
-	Join    = iota // TCP
-	Members        // TCP
-	Update         // UDP
-	Leave          // UDP
+	SUBSCRIBE             = iota
+	Unsubscribe
+	Publish
+	DisplayText
+	DisplaySubscription
+	DisplayUnsubscription
 )
 
 // TODO: export some constants to config file

@@ -11,14 +11,23 @@ import (
 )
 
 const (
-	// ReadBytes delimiter
-	EOF byte = '\x08'
+	// ReadBytes delimiter 'end of text'
+	EOT byte = '\x03'
 
 	// API
-	Join = iota
-	Members
-	Update
-	Leave
+	//Join = iota
+	//Members
+	//Update
+	//Leave
+
+	// API-like protocolbuffer messages
+	//
+	Subscribe    = iota
+	Unsubscribe
+	Publish
+	DisplayText
+	DisplaySubscription
+	DisplayUnsubscription
 )
 
 func main() {
@@ -30,7 +39,7 @@ func main() {
 		Leader: false,
 	}
 
-	fmt.Printf("%b\n", EOF)
+	fmt.Printf("%b\n", EOT)
 
 	// Create listener
 	conn, err := net.Dial("tcp", ":22365")
@@ -47,10 +56,10 @@ func main() {
 	}
 
 	// Prepend message type
-	msgType := []byte{Join}
+	msgType := []byte{DisplayText}
 	//fmt.Printf("Message Type: %T %#v\n", msgType, msgType)
 	byteArray = append(msgType, byteArray...)
-	byteArray = append(byteArray, EOF)
+	byteArray = append(byteArray, EOT)
 
 	conn.Write(byteArray)
 	fmt.Printf("Member sent (%v byte): %v\n", len(byteArray), member)
