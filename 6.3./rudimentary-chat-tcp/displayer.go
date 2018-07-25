@@ -20,7 +20,7 @@ func startDisplayer() error {
 	}
 	defer listener.Close()
 
-	log.Printf("Start displaying service listening on %q\n", displayingService)
+	log.Printf("Started displaying service listening on %q\n", displayingService)
 
 	for {
 		// Wait for a connection.
@@ -32,7 +32,7 @@ func startDisplayer() error {
 		// Handle the connection in a new goroutine.
 		// The loop then returns to accepting, so that
 		// multiple connections may be served concurrently.
-		go handleDisplayer(conn)
+		go handleDisplayerRequest(conn)
 	}
 
 	return nil
@@ -40,8 +40,7 @@ func startDisplayer() error {
 
 // Read all incoming data, take the leading byte as message type,
 // and use the appropriate handler for the rest
-func handleDisplayer(conn net.Conn) {
-	log.Printf("handleDisplayer(conn net.Conn)\n")
+func handleDisplayerRequest(conn net.Conn) {
 
 	defer conn.Close()
 
@@ -77,10 +76,11 @@ func handleDisplayer(conn net.Conn) {
 		if err != nil {
 			log.Printf("could not handleDisplaySubscription from %v: %v", addr, err)
 		}
-		_, err = conn.Write([]byte("12345678901234567890123456789012345678901234567890"))
-		if err != nil {
-			return
-		}
+
+		//_, err = conn.Write([]byte(""))
+		//if err != nil {
+		//	return
+		//}
 
 	case chatgroup.Message_DISPLAY_UNSUBSCRIPTION:
 
@@ -89,10 +89,11 @@ func handleDisplayer(conn net.Conn) {
 		if err != nil {
 			log.Printf("could not handleDisplayUnsubscription from %v: %v", addr, err)
 		}
-		_, err = conn.Write([]byte("12345678901234567890123456789012345678901234567890"))
-		if err != nil {
-			return
-		}
+
+		//_, err = conn.Write([]byte(""))
+		//if err != nil {
+		//	return
+		//}
 
 	case chatgroup.Message_DISPLAY_TEXT:
 
@@ -101,10 +102,11 @@ func handleDisplayer(conn net.Conn) {
 		if err != nil {
 			log.Printf("could not handleDisplayText from %v: %v", addr, err)
 		}
-		_, err = conn.Write([]byte("12345678901234567890123456789012345678901234567890"))
-		if err != nil {
-			return
-		}
+
+		//_, err = conn.Write([]byte(""))
+		//if err != nil {
+		//	return
+		//}
 
 	default:
 

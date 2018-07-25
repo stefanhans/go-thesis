@@ -22,6 +22,8 @@ var (
 	memberIp          string
 	memberPort        string
 	displayingService string
+	selfMember        *chatgroup.Member
 
+	// Publisher storage for member of chat group
 	cgMember []*chatgroup.Member
 )

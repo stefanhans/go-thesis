@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 	"strings"
 	"syscall"
+	"time"
+
+	"bitbucket.org/stefanhans/go-thesis/6.3./rudimentary-chat-tcp/chat-group"
 )
 
 func main() {
@@ -23,6 +25,10 @@ func main() {
 	memberPort = flag.Arg(2)
 
 	displayingService = memberIp + ":" + memberPort
+
+	selfMember = &chatgroup.Member{Name:memberName, Ip:memberIp, Port:memberPort, Leader:false}
+
+	isPublisher := false
 
 	// Prepare logfile for logging
 	year, month, day := time.Now().Date()
@@ -48,32 +54,52 @@ func main() {
 	// Switch logging to logfile
 	log.SetOutput(f)
 
-	// Start publishing service, if not running already
+	// Try to start publishing service and subscribe accordingly
 	go func() {
+
 		err := startPublisher()
 
-		// Check if Publisher "already in use"
+		// Check if Publisher is "already in use"
 		if err != nil && strings.Contains(err.Error(), syscall.EADDRINUSE.Error()) {
 
-			// Subscribe application via running publisher
-			log.Printf("Publisher 'already in use'\n")
+			isPublisher = true
+
+			// Subscribe to the already running publishing service
 			err = Subscribe()
 			if err != nil {
-				log.Fatalf("Subscribe: %v", err)
+				log.Fatalf("Failed to subscribe to running publishing service: %v", err)
 			}
+			log.Printf("Subscribed to the already running publishing service\n")
+		} else {
+			isPublisher = true
 		}
 	}()
+
 	// Start displaying service
 	go func() {
 		err = startDisplayer()
 		if err != nil {
-			log.Fatalf("startDisplayer on %q: %v", displayingService, err)
+			log.Fatalf("Failed to start displaying service on %q: %v", displayingService, err)
 		}
 	}()
 
 	// Start text-based UI
-	err = runTUI()
-	if err != nil {
-		log.Fatalf("runTUI: %v", err)
+	go func() {
+		err = runTUI()
+		if err != nil {
+			log.Fatalf("runTUI: %v", err)
+		}
+	}()
+
+	// todo: waitgroup
+	time.Sleep(time.Second)
+
+	if isPublisher {
+		// Append text messages in "messages" view of publisher
+		displayText(fmt.Sprintf("<publishing service running: %s (%s:%s)", memberName, memberIp, memberPort))
+		displayText(fmt.Sprintf("<%s (%s:%s) has joined>", memberName, memberIp, memberPort))
+	}
+
+	for {
 	}
 }

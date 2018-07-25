@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"strings"
 	"syscall"
 
@@ -26,7 +25,7 @@ func startPublisher() error {
 			// Subscribe at already running Publisher
 			err = Subscribe()
 			if err != nil {
-				log.Fatalf("Subscribe: %v", err)
+				log.Fatalf("failed to subscribe at already running Publisher: %v", err)
 			}
 			return nil
 		}
@@ -36,32 +35,32 @@ func startPublisher() error {
 	}
 	defer listener.Close()
 
-	// Subscribe directly
-	cgMember = append(cgMember, &chatgroup.Member{Name: memberName, Ip: memberIp, Port: memberPort, Leader: true})
-	log.Printf("Subscribed directly: %v\n", cgMember[0])
+	log.Printf("Started publishing service listening on %q\n", publishingService)
 
-	log.Printf("Start publishing service listening on %s\n", publishingService)
+	// Subscribe directly at started publishing service
+	cgMember = append(cgMember, &chatgroup.Member{Name: memberName, Ip: memberIp, Port: memberPort, Leader: true})
+	log.Printf("Subscribed directly at started publishing service: %v\n", cgMember[0])
 
 	for {
 		// Wait for a connection.
 		conn, err := listener.Accept()
 		if err != nil {
-			continue //log.Fatal(err)
+			log.Printf("failed to accept connection from publishing service listener: %s\n", err)
+			continue
 		}
 
 		// Handle the connection in a new goroutine.
 		// The loop then returns to accepting, so that
 		// multiple connections may be served concurrently.
-		go handleChatgroup(conn)
+		go handlePublisherRequest(conn)
 	}
 
 	return nil
 }
 
-// Read all incoming data, take the leading byte as message type,
+// Read all incoming data, take the message type,
 // and use the appropriate handler for the rest
-func handleChatgroup(conn net.Conn) {
-	log.Printf("handleChatgroup(conn net.Conn)\n")
+func handlePublisherRequest(conn net.Conn) {
 
 	defer conn.Close()
 
@@ -77,69 +76,73 @@ func handleChatgroup(conn net.Conn) {
 		data = append(data, buf[0:n]...)
 	}
 
-	log.Printf("Publisher received (%v bytes): %q\n", len(data), data)
+	log.Printf("Publisher received %v bytes\n", len(data))
 
 	var msg chatgroup.Message
 	err := proto.Unmarshal(data, &msg)
 	if err != nil {
-		fmt.Errorf("could not unmarshall msg: %v", err)
+		fmt.Errorf("could not unmarshall message: %v", err)
 	}
-
-	log.Printf("msg from %v: %v\n", addr, msg)
 
 	// Switch according to the message type
 	switch msg.MsgType {
 
 	case chatgroup.Message_SUBSCRIBE:
 
-		// Handle the protobuf message: Member
+		log.Printf("SUBSCRIBE: %v\n", msg)
+
 		err := handleSubscribe(&msg, addr)
 		if err != nil {
 			fmt.Printf("could not handleSubscribe from %v: %v", addr, err)
 		}
-		_, err = conn.Write([]byte("12345678901234567890123456789012345678901234567890"))
-		if err != nil {
-			return
-		}
+
+		//_, err = conn.Write([]byte(""))
+		//if err != nil {
+		//	return
+		//}
 
 	case chatgroup.Message_UNSUBSCRIBE:
+
+		log.Printf("UNSUBSCRIBE: %v\n", msg)
 
 		// Handle the protobuf message: Member
 		err := handleUnsubscribe(&msg)
 		if err != nil {
-			fmt.Printf("could not handleSubscribe from %v: %v", addr, err)
-		}
-		_, err = conn.Write([]byte("12345678901234567890123456789012345678901234567890"))
-		if err != nil {
-			return
+			fmt.Printf("could not handleUnsubscribe from %v: %v", addr, err)
 		}
 
+		//_, err = conn.Write([]byte(""))
+		//if err != nil {
+		//	return
+		//}
+
 	case chatgroup.Message_PUBLISH:
+
+		log.Printf("PUBLISH: %v\n", msg)
 
 		// Handle the protobuf message: Member
 		err := handlePublish(&msg, addr)
 		if err != nil {
-			fmt.Printf("could not handleSubscribe from %v: %v", addr, err)
+			fmt.Printf("could not handlePublish from %v: %v", addr, err)
 		}
-		_, err = conn.Write([]byte("12345678901234567890123456789012345678901234567890"))
-		if err != nil {
-			return
-		}
+
+		//_, err = conn.Write([]byte(""))
+		//if err != nil {
+		//	return
+		//}
 
 	default:
 
-		fmt.Printf("unknown MemberMessage")
+		log.Printf("publisher: unknown message type %v\n", msg.MsgType)
 	}
 }
 
 func handleSubscribe(msg *chatgroup.Message, addr net.Addr) error {
 
-	log.Printf("handleSubscribe: %v\n", msg.Sender)
-	msg.Sender.Ip = strings.Split(addr.String(), ":")[0]
-	log.Printf("handleSubscribe: %v\n", msg.Sender)
+	// Update remote IP address, if changed
+	updateRemoteIP(msg, addr)
 
 	// Check subscriber for uniqueness
-	log.Printf("Check subscriber for uniqueness: %v\n", msg.Sender)
 	for _, recipient := range cgMember {
 		if recipient.Name == msg.Sender.Name {
 			return fmt.Errorf("name %q already used", msg.Sender.Name)
@@ -152,51 +155,33 @@ func handleSubscribe(msg *chatgroup.Message, addr net.Addr) error {
 	// Add subscriber
 	log.Printf("Add subscriber: %v\n", msg.Sender)
 	cgMember = append(cgMember, msg.Sender)
-	log.Printf("memberlist: %v", cgMember)
-
 	log.Printf("Current members registered: %v\n", cgMember)
 
-	// Send message to other subscribers via gRPC Displayer service
+	// Forward message to other chat group members
 	for _, recipient := range cgMember {
 
 		msg.MsgType = chatgroup.Message_DISPLAY_SUBSCRIPTION
 
+		// Exclude sender and publisher from message forwarding
 		if recipient.Name != msg.Sender.Name && recipient.Name != memberName {
 			log.Printf("From %s to %s (%s:%s): %q\n", msg.Sender.Name, recipient.Name, recipient.Ip, recipient.Port, msg.Sender)
 
-			conn, err := net.Dial("tcp", recipient.Ip+":"+recipient.Port)
+			err := sendDisplayerRequest(msg, recipient.Ip+":"+recipient.Port)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Errorf("Failed send displayer request", err)
 			}
-			log.Printf("Dial to displaying server on %q\n", recipient.Ip+":"+recipient.Port)
-
-			// Marshal into binary format
-			byteArray, err := proto.Marshal(msg)
-			if err != nil {
-				fmt.Errorf("could not encode new member: %v", err)
-				os.Exit(1)
-			}
-
-			n, err := conn.Write(byteArray)
-			log.Printf("Message (%v byte) sent (%v byte): %v\n", len(byteArray), n, msg)
-
-			//conn.Read(byteArray)
-			//fmt.Printf("New member (%v byte) red: %v\n", len(byteArray), byteArray)
-
-			// Receive reply
-			conn.Close()
 		}
 	}
 
-	// Append text message in "messages" view
+	// Append text message in "messages" view of publisher
 	displayText(fmt.Sprintf("<%s (%s:%s) has joined>", msg.Sender.Name, msg.Sender.Ip, msg.Sender.Port))
 
 	return nil
 }
+
 func handleUnsubscribe(msg *chatgroup.Message) error {
 
 	log.Printf("Unregister: %v\n", msg.Sender)
-
 
 	// Remove subscriber
 	for i, s := range cgMember {
@@ -212,78 +197,81 @@ func handleUnsubscribe(msg *chatgroup.Message) error {
 
 		msg.MsgType = chatgroup.Message_DISPLAY_UNSUBSCRIPTION
 
-		if recipient.Name != msg.Sender.Name && recipient.Name != memberName  {
+		// Exclude sender and publisher from message forwarding
+		if recipient.Name != msg.Sender.Name && recipient.Name != memberName {
 			log.Printf("From %s to %s (%s:%s): %q\n", msg.Sender.Name, recipient.Name, recipient.Ip, recipient.Port, msg.Sender)
 
-			conn, err := net.Dial("tcp", recipient.Ip+":"+recipient.Port)
+			err := sendDisplayerRequest(msg, recipient.Ip+":"+recipient.Port)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Errorf("Failed send displayer request", err)
 			}
-			log.Printf("Dial to displaying server on %q\n", recipient.Ip+":"+recipient.Port)
-
-			// Marshal into binary format
-			byteArray, err := proto.Marshal(msg)
-			if err != nil {
-				fmt.Errorf("could not encode new member: %v", err)
-				os.Exit(1)
-			}
-
-			n, err := conn.Write(byteArray)
-			log.Printf("Message (%v byte) sent (%v byte): %v\n", len(byteArray), n, msg)
-
-			//conn.Read(byteArray)
-			//fmt.Printf("New member (%v byte) red: %v\n", len(byteArray), byteArray)
-
-			// Receive reply
-			conn.Close()
 		}
 	}
 
-
-
+	// Append text message in "messages" view of publisher
 	displayText(fmt.Sprintf("<%s has left>", msg.Sender.Name))
 
 	return nil
 }
+
 func handlePublish(msg *chatgroup.Message, addr net.Addr) error {
 
-	log.Printf("handleSubscribe: %v\n", msg.Sender)
-	msg.Sender.Ip = strings.Split(addr.String(), ":")[0]
-	log.Printf("handleSubscribe: %v\n", msg.Sender)
+	// Update remote IP address, if changed
+	updateRemoteIP(msg, addr)
 
 	log.Printf("Publish from %v: %q\n", msg.Sender.Name, msg.Text)
+
+	msg.MsgType = chatgroup.Message_DISPLAY_TEXT
 
 	// Send message to other subscribers via gRPC Displayer service
 	for _, recipient := range cgMember {
 
-		msg.MsgType = chatgroup.Message_DISPLAY_TEXT
+		// Exclude sender and publisher from message forwarding
+		if recipient.Name != msg.Sender.Name && recipient.Name != memberName {
+			log.Printf("From %s to %s (%s:%s): %q\n", msg.Sender.Name, recipient.Name, recipient.Ip, recipient.Port, msg.Sender)
 
-		if recipient.Name != msg.Sender.Name {
-			log.Printf("From %s to %s (%s:%s): %q\n", msg.Sender.Name, recipient.Name, recipient.Ip, recipient.Port, msg.Text)
-
-			conn, err := net.Dial("tcp", recipient.Ip+":"+recipient.Port)
+			err := sendDisplayerRequest(msg, recipient.Ip+":"+recipient.Port)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Errorf("Failed send displayer request", err)
 			}
-			log.Printf("Dial to Rootserver on 127.0.0.1:22365\n")
-
-			// Marshal into binary format
-			byteArray, err := proto.Marshal(msg)
-			if err != nil {
-				fmt.Errorf("could not encode new member: %v", err)
-				os.Exit(1)
-			}
-
-			n, err := conn.Write(byteArray)
-			log.Printf("Message (%v byte) sent (%v byte): %v\n", len(byteArray), n, msg)
-
-			//conn.Read(byteArray)
-			//fmt.Printf("New member (%v byte) red: %v\n", len(byteArray), byteArray)
-
-			// Receive reply
-			conn.Close()
 		}
 	}
 
+	// Append text message in "messages" view of publisher
+	displayText(fmt.Sprintf("%s: %s", msg.Sender.Name, msg.Text))
+
 	return nil
+}
+
+func updateRemoteIP(msg *chatgroup.Message, addr net.Addr) {
+
+	// Check remote Ip address change of message
+	if msg.Sender.Ip != strings.Split(addr.String(), ":")[0] {
+		log.Printf("Remote Ip address update from %v to %v\n", msg.Sender.Ip, strings.Split(addr.String(), ":")[0])
+		msg.Sender.Ip = strings.Split(addr.String(), ":")[0]
+	}
+}
+
+//
+func sendDisplayerRequest(message *chatgroup.Message, service string) error {
+
+	conn, err := net.Dial("tcp", service)
+	if err != nil {
+		return fmt.Errorf("could not connect to displaying service: %v", err)
+	}
+
+	// Marshal into binary format
+	byteArray, err := proto.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("could not encode message: %v", err)
+	}
+
+	n, err := conn.Write(byteArray)
+	log.Printf("Message (%v byte) sent (%v byte): %v\n", len(byteArray), n, message)
+
+	//conn.Read(byteArray)
+	//fmt.Printf("New member (%v byte) red: %v\n", len(byteArray), byteArray)
+
+	// Receive reply
+	return conn.Close()
 }
