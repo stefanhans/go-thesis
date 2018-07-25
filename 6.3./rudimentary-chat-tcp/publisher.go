@@ -41,6 +41,8 @@ func startPublisher() error {
 	cgMember = append(cgMember, &chatgroup.Member{Name: memberName, Ip: memberIp, Port: memberPort, Leader: true})
 	log.Printf("Subscribed directly at started publishing service: %v\n", cgMember[0])
 
+	selfMember.Leader = true
+
 	for {
 		// Wait for a connection.
 		conn, err := listener.Accept()
@@ -227,7 +229,7 @@ func handlePublish(msg *chatgroup.Message, addr net.Addr) error {
 	for _, recipient := range cgMember {
 
 		// Exclude sender and publisher from message forwarding
-		if recipient.Name != msg.Sender.Name && recipient.Name != memberName {
+		if recipient.Name != msg.Sender.Name {
 			log.Printf("From %s to %s (%s:%s): %q\n", msg.Sender.Name, recipient.Name, recipient.Ip, recipient.Port, msg.Sender)
 
 			err := sendDisplayerRequest(msg, recipient.Ip+":"+recipient.Port)
@@ -238,7 +240,7 @@ func handlePublish(msg *chatgroup.Message, addr net.Addr) error {
 	}
 
 	// Append text message in "messages" view of publisher
-	displayText(fmt.Sprintf("%s: %s", msg.Sender.Name, msg.Text))
+	//displayText(fmt.Sprintf("%s: %s", msg.Sender.Name, msg.Text))
 
 	return nil
 }

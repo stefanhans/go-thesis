@@ -28,8 +28,6 @@ func main() {
 
 	selfMember = &chatgroup.Member{Name:memberName, Ip:memberIp, Port:memberPort, Leader:false}
 
-	isPublisher := false
-
 	// Prepare logfile for logging
 	year, month, day := time.Now().Date()
 	hour, minute, second := time.Now().Clock()
@@ -62,16 +60,12 @@ func main() {
 		// Check if Publisher is "already in use"
 		if err != nil && strings.Contains(err.Error(), syscall.EADDRINUSE.Error()) {
 
-			isPublisher = true
-
 			// Subscribe to the already running publishing service
 			err = Subscribe()
 			if err != nil {
 				log.Fatalf("Failed to subscribe to running publishing service: %v", err)
 			}
 			log.Printf("Subscribed to the already running publishing service\n")
-		} else {
-			isPublisher = true
 		}
 	}()
 
@@ -94,7 +88,7 @@ func main() {
 	// todo: waitgroup
 	time.Sleep(time.Second)
 
-	if isPublisher {
+	if selfMember.Leader {
 		// Append text messages in "messages" view of publisher
 		displayText(fmt.Sprintf("<publishing service running: %s (%s:%s)", memberName, memberIp, memberPort))
 		displayText(fmt.Sprintf("<%s (%s:%s) has joined>", memberName, memberIp, memberPort))
