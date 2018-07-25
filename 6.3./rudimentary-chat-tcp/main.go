@@ -6,19 +6,8 @@ import (
 	"log"
 	"os"
 	"time"
-)
-
-// Publishing service on a commonly known address
-const (
-	serverIp   string = "localhost"
-	serverPort string = "22365"
-)
-
-// Identity set by command args
-var (
-	memberName string
-	memberIp   string
-	memberPort string
+	"strings"
+	"syscall"
 )
 
 func main() {
@@ -33,6 +22,8 @@ func main() {
 	memberIp = flag.Arg(1)
 	memberPort = flag.Arg(2)
 
+	displayingService = memberIp + ":" + memberPort
+
 	// Prepare logfile for logging
 	year, month, day := time.Now().Date()
 	hour, minute, second := time.Now().Clock()
@@ -45,23 +36,40 @@ func main() {
 	}
 	defer f.Close()
 
+	if debug {
+		log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+		log.SetPrefix("DEBUG: ")
+
+		//debug = log.New(f, "DEBUG: ", log.Ldate | log.Ltime | log.Lshortfile)
+	} else {
+		log.SetPrefix("LOG: ")
+	}
+
 	// Switch logging to logfile
 	log.SetOutput(f)
 
 	// Start publishing service, if not running already
-	startPublisher(serverIp, serverPort)
+	go func() {
+		err := startPublisher()
 
-	// Subscribe client to publisher
-	err = Subscribe(memberName, memberIp, memberPort)
-	if err != nil {
-		log.Fatalf("Subscribe: %v", err)
-	}
+		// Check if Publisher "already in use"
+		if err != nil && strings.Contains(err.Error(), syscall.EADDRINUSE.Error()) {
 
-	// Start displaying service for text-based UI
-	err = startDisplayer(memberName, memberIp, memberPort)
-	if err != nil {
-		log.Fatalf("startDisplayer: %v", err)
-	}
+			// Subscribe application via running publisher
+			log.Printf("Publisher 'already in use'\n")
+			err = Subscribe()
+			if err != nil {
+				log.Fatalf("Subscribe: %v", err)
+			}
+		}
+	}()
+	// Start displaying service
+	go func() {
+		err = startDisplayer()
+		if err != nil {
+			log.Fatalf("startDisplayer on %q: %v", displayingService, err)
+		}
+	}()
 
 	// Start text-based UI
 	err = runTUI()

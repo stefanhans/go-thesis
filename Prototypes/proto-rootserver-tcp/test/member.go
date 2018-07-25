@@ -22,12 +22,10 @@ const (
 
 	// API-like protocolbuffer messages
 	//
-	Subscribe    = iota
-	Unsubscribe
-	Publish
-	DisplayText
-	DisplaySubscription
-	DisplayUnsubscription
+	Join    = iota // TCP
+	Members        // TCP
+	Update         // UDP
+	Leave          // UDP
 )
 
 func main() {
@@ -56,7 +54,7 @@ func main() {
 	}
 
 	// Prepend message type
-	msgType := []byte{DisplayText}
+	msgType := []byte{Join}
 	//fmt.Printf("Message Type: %T %#v\n", msgType, msgType)
 	byteArray = append(msgType, byteArray...)
 	byteArray = append(byteArray, EOT)

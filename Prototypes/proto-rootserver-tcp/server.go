@@ -84,7 +84,7 @@ func handleMembergroupConnection(conn net.Conn) {
 
 		default:
 
-			fmt.Printf("unknown MemberMessage")
+			fmt.Printf("unknown MemberMessage\n")
 		}
 	}
 

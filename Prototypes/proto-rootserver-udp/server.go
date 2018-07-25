@@ -6,6 +6,8 @@ import (
 	"net"
 
 	"bitbucket.org/stefanhans/go-thesis/Prototypes/proto-rootserver-udp/member-group"
+	"time"
+	"os"
 )
 
 var mbStorage []*membergroup.Member
@@ -19,6 +21,24 @@ var (
 
 func main() {
 
+
+	// Prepare logfile for logging
+	year, month, day := time.Now().Date()
+	hour, minute, second := time.Now().Clock()
+	logfilename := fmt.Sprintf("rudimentary-chat-udp-%s-%v%02d%02d%02d%02d%02d.log", "test",
+		year, int(month), int(day), int(hour), int(minute), int(second))
+
+	f, err := os.OpenFile(logfilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening logfile %v: %v", logfilename, err)
+	}
+	defer f.Close()
+
+	// Config logging to logfile
+	log.SetPrefix("DEBUG: ")
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	log.SetOutput(f)
+
 	// Create listener
 	l, err = net.ListenPacket("udp", ":"+Port)
 	if err != nil {
@@ -29,19 +49,23 @@ func main() {
 
 	buffer := make([]byte, 1024)
 
-	for {
-		n, addr, err = l.ReadFrom(buffer)
-		if err != nil {
-			log.Printf("cannot read from buffer:%v", err)
-		} else {
-			go func(buffer []byte, addr net.Addr) {
-				reply := handleMembergroupConnection(buffer, addr)
-				if reply != nil {
-					l.WriteTo(reply, addr)
-				}
-			}(buffer[:n], addr)
+	go func() {
+		for {
+			n, addr, err = l.ReadFrom(buffer)
+			if err != nil {
+				log.Printf("cannot read from buffer:%v", err)
+			} else {
+				go func(buffer []byte, addr net.Addr) {
+					reply := handleMembergroupConnection(buffer, addr)
+					if reply != nil {
+						l.WriteTo(reply, addr)
+					}
+				}(buffer[:n], addr)
+			}
 		}
-	}
+	}()
+
+	for {}
 }
 
 // Read all incoming data, take the leading byte as message type,
