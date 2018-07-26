@@ -38,10 +38,9 @@ func startPublisher() error {
 	log.Printf("Started publishing service listening on %q\n", publishingService)
 
 	// Subscribe directly at started publishing service
-	cgMember = append(cgMember, &chatgroup.Member{Name: memberName, Ip: memberIp, Port: memberPort, Leader: true})
-	log.Printf("Subscribed directly at started publishing service: %v\n", cgMember[0])
-
 	selfMember.Leader = true
+	cgMember = append(cgMember, selfMember)
+	log.Printf("Subscribed directly at started publishing service: %v\n", cgMember[0])
 
 	for {
 		// Wait for a connection.
@@ -133,114 +132,107 @@ func handlePublisherRequest(conn net.Conn) {
 		//	return
 		//}
 
+	case chatgroup.Message_CMD_LIST:
+
+		log.Printf("CMD_LIST: %v\n", msg)
+
+		// Handle the protobuf message: Member
+		err := handleCmdList(&msg, addr)
+		if err != nil {
+			fmt.Printf("could not handleCmdList from %v: %v", addr, err)
+		}
+
+		//_, err = conn.Write([]byte(""))
+		//if err != nil {
+		//	return
+		//}
+
 	default:
 
 		log.Printf("publisher: unknown message type %v\n", msg.MsgType)
 	}
 }
 
-func handleSubscribe(msg *chatgroup.Message, addr net.Addr) error {
+func handleSubscribe(message *chatgroup.Message, addr net.Addr) error {
 
 	// Update remote IP address, if changed
-	updateRemoteIP(msg, addr)
+	updateRemoteIP(message, addr)
 
 	// Check subscriber for uniqueness
 	for _, recipient := range cgMember {
-		if recipient.Name == msg.Sender.Name {
-			return fmt.Errorf("name %q already used", msg.Sender.Name)
+		if recipient.Name == message.Sender.Name {
+			return fmt.Errorf("name %q already used", message.Sender.Name)
 		}
-		if recipient.Ip == msg.Sender.Ip && recipient.Port == msg.Sender.Port {
+		if recipient.Ip == message.Sender.Ip && recipient.Port == message.Sender.Port {
 			return fmt.Errorf("address %s:%s already used by %s", recipient.Ip, recipient.Port, recipient.Name)
 		}
 	}
 
 	// Add subscriber
-	log.Printf("Add subscriber: %v\n", msg.Sender)
-	cgMember = append(cgMember, msg.Sender)
+	log.Printf("Add subscriber: %v\n", message.Sender)
+	cgMember = append(cgMember, message.Sender)
 	log.Printf("Current members registered: %v\n", cgMember)
 
-	// Forward message to other chat group members
-	for _, recipient := range cgMember {
-
-		msg.MsgType = chatgroup.Message_DISPLAY_SUBSCRIPTION
-
-		// Exclude sender and publisher from message forwarding
-		if recipient.Name != msg.Sender.Name && recipient.Name != memberName {
-			log.Printf("From %s to %s (%s:%s): %q\n", msg.Sender.Name, recipient.Name, recipient.Ip, recipient.Port, msg.Sender)
-
-			err := sendDisplayerRequest(msg, recipient.Ip+":"+recipient.Port)
-			if err != nil {
-				fmt.Errorf("Failed send displayer request", err)
-			}
-		}
+	err := publishDisplayerRequest(message, chatgroup.Message_DISPLAY_SUBSCRIPTION)
+	if err != nil {
+		fmt.Errorf("Failed to publish Message_DISPLAY_SUBSCRIPTION", err)
 	}
-
-	// Append text message in "messages" view of publisher
-	displayText(fmt.Sprintf("<%s (%s:%s) has joined>", msg.Sender.Name, msg.Sender.Ip, msg.Sender.Port))
 
 	return nil
 }
 
-func handleUnsubscribe(msg *chatgroup.Message) error {
+func handleUnsubscribe(message *chatgroup.Message) error {
 
-	log.Printf("Unregister: %v\n", msg.Sender)
+	log.Printf("Unregister: %v\n", message.Sender)
 
 	// Remove subscriber
 	for i, s := range cgMember {
-		if s.Name == msg.Sender.Name {
+		if s.Name == message.Sender.Name {
 			cgMember = append(cgMember[:i], cgMember[i+1:]...)
 			break
 		}
 	}
 	log.Printf("Current members registered: %v\n", cgMember)
 
-	// Send message to other subscribers via gRPC Displayer service
-	for _, recipient := range cgMember {
-
-		msg.MsgType = chatgroup.Message_DISPLAY_UNSUBSCRIPTION
-
-		// Exclude sender and publisher from message forwarding
-		if recipient.Name != msg.Sender.Name && recipient.Name != memberName {
-			log.Printf("From %s to %s (%s:%s): %q\n", msg.Sender.Name, recipient.Name, recipient.Ip, recipient.Port, msg.Sender)
-
-			err := sendDisplayerRequest(msg, recipient.Ip+":"+recipient.Port)
-			if err != nil {
-				fmt.Errorf("Failed send displayer request", err)
-			}
-		}
+	err := publishDisplayerRequest(message, chatgroup.Message_DISPLAY_UNSUBSCRIPTION)
+	if err != nil {
+		fmt.Errorf("Failed to publish Message_DISPLAY_UNSUBSCRIPTION", err)
 	}
-
-	// Append text message in "messages" view of publisher
-	displayText(fmt.Sprintf("<%s has left>", msg.Sender.Name))
 
 	return nil
 }
 
-func handlePublish(msg *chatgroup.Message, addr net.Addr) error {
+func handlePublish(message *chatgroup.Message, addr net.Addr) error {
 
 	// Update remote IP address, if changed
-	updateRemoteIP(msg, addr)
+	updateRemoteIP(message, addr)
 
-	log.Printf("Publish from %v: %q\n", msg.Sender.Name, msg.Text)
+	log.Printf("Publish from %v: %q\n", message.Sender.Name, message.Text)
 
-	msg.MsgType = chatgroup.Message_DISPLAY_TEXT
-
-	// Send message to other subscribers via gRPC Displayer service
-	for _, recipient := range cgMember {
-
-		// Exclude sender and publisher from message forwarding
-		if recipient.Name != msg.Sender.Name {
-			log.Printf("From %s to %s (%s:%s): %q\n", msg.Sender.Name, recipient.Name, recipient.Ip, recipient.Port, msg.Sender)
-
-			err := sendDisplayerRequest(msg, recipient.Ip+":"+recipient.Port)
-			if err != nil {
-				fmt.Errorf("Failed send displayer request", err)
-			}
-		}
+	err := publishDisplayerRequest(message, chatgroup.Message_DISPLAY_TEXT)
+	if err != nil {
+		fmt.Errorf("Failed to publish Message_DISPLAY_TEXT", err)
 	}
 
-	// Append text message in "messages" view of publisher
-	//displayText(fmt.Sprintf("%s: %s", msg.Sender.Name, msg.Text))
+	return nil
+}
+
+func handleCmdList(message *chatgroup.Message, addr net.Addr) error {
+
+	// Update remote IP address, if changed
+	updateRemoteIP(message, addr)
+
+	log.Printf("List request from %v: %q\n", message.Sender.Name, message.Text)
+
+	err := executeCmdList(message)
+	if err != nil {
+		fmt.Errorf("Failed to execute list request", err)
+	}
+
+	err = replyCmdRequest(message)
+	if err != nil {
+		fmt.Errorf("Failed to reply to list request", err)
+	}
 
 	return nil
 }
@@ -254,7 +246,6 @@ func updateRemoteIP(msg *chatgroup.Message, addr net.Addr) {
 	}
 }
 
-//
 func sendDisplayerRequest(message *chatgroup.Message, service string) error {
 
 	conn, err := net.Dial("tcp", service)
@@ -276,4 +267,69 @@ func sendDisplayerRequest(message *chatgroup.Message, service string) error {
 
 	// Receive reply
 	return conn.Close()
+}
+
+func publishDisplayerRequest(message *chatgroup.Message, msgType chatgroup.Message_MessageType) error {
+
+	message.MsgType = msgType
+
+	// Forward message to other chat group members
+	for _, recipient := range cgMember {
+
+		// Exclude sender and publisher from message forwarding
+		if recipient.Name != message.Sender.Name {
+			log.Printf("From %s to %s (%s:%s): %q\n",
+				message.Sender.Name, recipient.Name, recipient.Ip, recipient.Port, message.Sender)
+
+			err := sendDisplayerRequest(message, recipient.Ip+":"+recipient.Port)
+			if err != nil {
+				fmt.Errorf("Failed send displayer request", err)
+			}
+
+			//conn, err := net.Dial("tcp", recipient.Ip+":"+recipient.Port)
+			//if err != nil {
+			//	return fmt.Errorf("could not connect to displaying service: %v", err)
+			//}
+			//
+			//// Marshal into binary format
+			//byteArray, err := proto.Marshal(message)
+			//if err != nil {
+			//	return fmt.Errorf("could not encode message: %v", err)
+			//}
+			//
+			//n, err := conn.Write(byteArray)
+			//log.Printf("Message (%v byte) sent (%v byte): %v\n", len(byteArray), n, message)
+			//
+			//err = conn.Close()
+			//if err != nil {
+			//	return fmt.Errorf("could not close connection: %v", err)
+			//}
+		}
+	}
+	return nil
+}
+
+func replyCmdRequest(message *chatgroup.Message) error {
+
+	message.MsgType = chatgroup.Message_CMD_REPLY
+
+	err := sendDisplayerRequest(message, message.Sender.Ip+":"+message.Sender.Port)
+	if err != nil {
+		return fmt.Errorf("could not send command reply: %v", err)
+	}
+
+	return nil
+}
+
+func executeCmdList(message *chatgroup.Message) error {
+
+	text := ""
+	for i, member := range cgMember {
+		text += fmt.Sprintf("<LIST>: %v: %s\n", i, member)
+	}
+	message.Text = strings.Trim(text, "\n")
+
+	message.Sender.Name = selfMember.Name
+
+	return nil
 }

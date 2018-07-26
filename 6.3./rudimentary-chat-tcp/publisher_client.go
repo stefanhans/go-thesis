@@ -13,14 +13,10 @@ func Subscribe() error {
 
 	newMember := &chatgroup.Message{
 		MsgType: chatgroup.Message_SUBSCRIBE,
-		Sender: &chatgroup.Member{
-			Name:   memberName,
-			Ip:     memberIp,
-			Port:   memberPort,
-			Leader: false}}
+		Sender:  selfMember}
 
 	// Append subscription message in "messages" view
-	displayText(fmt.Sprintf("<%s (%s:%s) has joined>", memberName, memberIp, memberPort))
+	displayText(fmt.Sprintf("<%s (%s:%s) has joined>", selfMember.Name, selfMember.Ip, selfMember.Port))
 
 	return sendPublisherRequest(newMember)
 }
@@ -39,12 +35,23 @@ func Publish(text string) error {
 
 	message := &chatgroup.Message{
 		MsgType: chatgroup.Message_PUBLISH,
-		Sender: &chatgroup.Member{
-			Name:   memberName,
-			Ip:     memberIp,
-			Port:   memberPort,
-			Leader: false},
-		Text: text}
+		Sender:  selfMember,
+		Text:    text}
+
+	// Append text message in "messages" view
+	displayText(fmt.Sprintf("%s: %s", selfMember.Name, message.Text))
+
+	return sendPublisherRequest(message)
+}
+
+func List() error {
+
+	message := &chatgroup.Message{
+		MsgType: chatgroup.Message_CMD_LIST,
+		Sender:  selfMember}
+
+	// Append text message in "messages" view
+	displayText(fmt.Sprintf("%s", "<CMD LIST>: Send request to publishing service..."))
 
 	return sendPublisherRequest(message)
 }

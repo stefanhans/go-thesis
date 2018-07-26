@@ -21,6 +21,8 @@ message Message {
         DISPLAY_TEXT = 3;
         DISPLAY_SUBSCRIPTION = 4;
         DISPLAY_UNSUBSCRIPTION = 5;
+        CMD_REPLY = 6;
+        CMD_LIST = 7;
     }
     MessageType msgType = 1;
     Member  sender = 2;

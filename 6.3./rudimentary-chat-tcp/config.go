@@ -18,9 +18,9 @@ const (
 var (
 
 	// Application identity set by command args
-	memberName        string
-	memberIp          string
-	memberPort        string
+	//memberName        string
+	//memberIp          string
+	//memberPort        string
 	displayingService string
 	selfMember        *chatgroup.Member
 

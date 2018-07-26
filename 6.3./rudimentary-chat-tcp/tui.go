@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/jroimartin/gocui"
-	"strings"
 )
 
 var (
@@ -76,7 +76,7 @@ func layout(g *gocui.Gui) error {
 func quit(g *gocui.Gui, v *gocui.View) error {
 
 	// Unsubscribe via PublisherClient
-	Unsubscribe(memberName)
+	Unsubscribe(selfMember.Name)
 
 	return gocui.ErrQuit
 }
@@ -84,18 +84,21 @@ func quit(g *gocui.Gui, v *gocui.View) error {
 // Send content from the view "input"
 func send(g *gocui.Gui, inputView *gocui.View) error {
 
-	// Get the "messages"
-	m, err := clientGui.View("messages")
-	if err != nil {
-		log.Fatal(err)
+	input := strings.Trim(inputView.Buffer(), "\n")
+
+	if strings.HasPrefix(input, "\\") {
+		executeCommand(input)
+
+		//commandString := strings.Fields(strings.Trim(input, "\\"))
+		//log.Printf("Command: %q\n", commandString[0])
+		//log.Printf("Arguments (%v): %v\n", len(commandString[1:]), commandString[1:])
+
 	} else {
-
 		// Send "input" to Publisher
-		Publish(strings.Trim(inputView.Buffer(), "\n"))
-
-		// Write "input" to "messages"
-		m.Write([]byte(fmt.Sprintf("%s: %s", memberName, inputView.Buffer())))
+		Publish(input)
 	}
+
+
 
 	// Clear the "input" and reset the cursor
 	inputView.Clear()
