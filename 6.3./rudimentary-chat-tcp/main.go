@@ -26,14 +26,15 @@ func main() {
 	// Prepare logfile for logging
 	year, month, day := time.Now().Date()
 	hour, minute, second := time.Now().Clock()
-	logfilename := fmt.Sprintf("rudimentary-chat-tcp-%s-%v%02d%02d%02d%02d%02d.log", selfMember.Name,
+	logfilename = fmt.Sprintf("rudimentary-chat-tcp-%s-%v%02d%02d%02d%02d%02d.log", selfMember.Name,
 		year, int(month), int(day), int(hour), int(minute), int(second))
 
-	f, err := os.OpenFile(logfilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	var err error
+	logfile, err = os.OpenFile(logfilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("error opening logfile %v: %v", logfilename, err)
 	}
-	defer f.Close()
+	defer logfile.Close()
 
 	// Config logging
 	if debug {
@@ -46,7 +47,7 @@ func main() {
 	}
 
 	// Switch logging to logfile
-	log.SetOutput(f)
+	log.SetOutput(logfile)
 
 	// Initialize chat command usage
 	commandUsageInit()

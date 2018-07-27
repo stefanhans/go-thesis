@@ -7,6 +7,7 @@ import (
 
 	"bitbucket.org/stefanhans/go-thesis/6.3./rudimentary-chat-tcp/chat-group"
 	"sort"
+	"io/ioutil"
 )
 
 var (
@@ -19,6 +20,8 @@ func commandUsageInit() {
 
 	cmdUsage["clear"] = "\\clear"
 	cmdUsage["list"] = "\\list"
+	cmdUsage["log"] = "\\log"
+	cmdUsage["logfile"] = "\\logfile"
 	cmdUsage["publisher"] = "\\publisher [details]"
 	cmdUsage["self"] = "\\self"
 	cmdUsage["subscribe"] = "\\subscribe <name> <ip> <port>"
@@ -47,9 +50,21 @@ func executeCommand(commandline string) {
 			log.Printf("CMD_CLEAR\n")
 			clear(commandFields[1:])
 
+		case "dump":
+			log.Printf("CMD_DUMP\n")
+			dump(commandFields[1:])
+
 		case "list":
 			log.Printf("CMD_LIST\n")
 			list(commandFields[1:])
+
+		case "log":
+			log.Printf("CMD_LOG\n")
+			showLog(commandFields[1:])
+
+		case "logfile":
+			log.Printf("CMD_LOGFILE\n")
+			showLogfile(commandFields[1:])
 
 		case "publisher":
 			log.Printf("CMD_PUBLISHER\n")
@@ -88,12 +103,43 @@ func clear(arguments []string) error {
 	return nil
 }
 
+func dump(arguments []string) error {
+
+	messagesView, _ := clientGui.View("messages")
+	log.Printf("\n ***** DUMP START *****\n%v ***** DUMP END *****\n", messagesView.Buffer())
+	return nil
+}
+
 func list(arguments []string) error {
 
 	err := List()
 	if err != nil {
 		log.Printf("could not request \\list: %v\n", err)
 	}
+	return nil
+}
+
+func showLog(arguments []string) error {
+
+	data, err := ioutil.ReadFile(logfilename)
+	if err	!= nil {
+		return fmt.Errorf("cannot read file %q: %v", logfilename, err)
+	}
+
+	out := ""
+	for i, line := range strings.Split(string(data), "\n") {
+		if len(line) > 0 {
+			out += fmt.Sprintf("<%v>: %v\n", i, line)
+		}
+	}
+	displayText(strings.Trim(out, "\n"))
+
+	return nil
+}
+
+func showLogfile(arguments []string) error {
+
+	displayText(fmt.Sprintf("<CMD_LOGFILE>: %v", logfilename))
 	return nil
 }
 

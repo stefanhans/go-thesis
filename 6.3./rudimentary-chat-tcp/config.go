@@ -2,6 +2,7 @@ package main
 
 import (
 	"bitbucket.org/stefanhans/go-thesis/6.3./rudimentary-chat-tcp/chat-group"
+	"os"
 )
 
 const (
@@ -18,12 +19,13 @@ const (
 var (
 
 	// Application identity set by command args
-	//memberName        string
-	//memberIp          string
-	//memberPort        string
 	displayingService string
 	selfMember        *chatgroup.Member
 
 	// Publisher storage for member of chat group
 	cgMember []*chatgroup.Member
+
+	//
+	logfilename string
+	logfile *os.File
 )

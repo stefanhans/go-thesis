@@ -30,7 +30,7 @@ func startPublisher() error {
 
 			// Append text messages in "messages" view of subscriber
 			displayText(fmt.Sprintf("<%s (%s:%s) has joined>", selfMember.Name, selfMember.Ip, selfMember.Port))
-			
+
 			return nil
 		}
 

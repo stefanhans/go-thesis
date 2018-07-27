@@ -37,6 +37,8 @@ func runTUI() error {
 	// Bind keys with functions
 	clientGui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit)
 	clientGui.SetKeybinding("input", gocui.KeyEnter, gocui.ModNone, send)
+	clientGui.SetKeybinding("", gocui.KeyArrowDown, gocui.ModNone, up)
+	clientGui.SetKeybinding("", gocui.KeyArrowUp, gocui.ModNone, down)
 
 	// Start main event loop of the TUI
 	return clientGui.MainLoop()
@@ -123,5 +125,33 @@ func displayText(txt string) error {
 		fmt.Fprintln(messagesView, txt)
 		return nil
 	})
+	return nil
+}
+
+func up(g *gocui.Gui, inputView *gocui.View) error {
+
+	messagesView, err := clientGui.View("messages")
+	if err != nil {
+		return fmt.Errorf("could not move messages down: %v\n", err)
+	}
+	x, y := messagesView.Origin()
+	messagesView.SetOrigin(x, y-1)
+	x2, y2 := messagesView.Origin()
+
+	log.Printf("Moved from %v/%v to %v/%v\n", x, y, x2, y2)
+	return nil
+}
+
+func down(g *gocui.Gui, inputView *gocui.View) error {
+
+	messagesView, err := clientGui.View("messages")
+	if err != nil {
+		return fmt.Errorf("could not move messages down: %v\n", err)
+	}
+	x, y := messagesView.Origin()
+	messagesView.SetOrigin(x, y+1)
+	x2, y2 := messagesView.Origin()
+
+	log.Printf("Moved from %v/%v to %v/%v\n", x, y, x2, y2)
 	return nil
 }
