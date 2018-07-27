@@ -147,7 +147,7 @@ func unsubscribe(arguments []string) error {
 		sendPublisherRequest(leavingMember)
 
 		// Append subscription message in "messages" view
-		displayText(fmt.Sprintf("<CMD_UNSUBSCRIBE>: %s (%s:%s) has left", leavingMember.Sender.Name))
+		displayText(fmt.Sprintf("<CMD_UNSUBSCRIBE>: %s has left", leavingMember.Sender.Name))
 	} else {
 		displayText(fmt.Sprintf("<CMD_UNSUBSCRIBE>: Usage: %s", cmdUsage["unsubscribe"]))
 	}

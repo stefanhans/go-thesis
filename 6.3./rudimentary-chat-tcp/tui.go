@@ -12,8 +12,10 @@ var (
 	clientGui *gocui.Gui
 )
 
-// Run the text-based UI
-func runTUI() error {
+// Create the text-based UI.
+// Afterwards we can use clientGui.Update or displayText, respectively,
+// to display change views as soon as TUI is running
+func initTUI() error {
 	var err error
 
 	// Create the TUI
@@ -22,6 +24,12 @@ func runTUI() error {
 		return fmt.Errorf("could not create tui: %v\n", err)
 	}
 	defer clientGui.Close()
+
+	return err
+}
+
+// Configure and run the text-based UI
+func runTUI() error {
 
 	// Set function to manage all views and keybindings
 	clientGui.SetManagerFunc(layout)
@@ -87,18 +95,14 @@ func send(g *gocui.Gui, inputView *gocui.View) error {
 	input := strings.Trim(inputView.Buffer(), "\n")
 
 	if strings.HasPrefix(input, "\\") {
-		executeCommand(input)
 
-		//commandString := strings.Fields(strings.Trim(input, "\\"))
-		//log.Printf("Command: %q\n", commandString[0])
-		//log.Printf("Arguments (%v): %v\n", len(commandString[1:]), commandString[1:])
+		// Interpret "input" as command
+		executeCommand(input)
 
 	} else {
 		// Send "input" to Publisher
 		Publish(input)
 	}
-
-
 
 	// Clear the "input" and reset the cursor
 	inputView.Clear()
@@ -111,8 +115,11 @@ func send(g *gocui.Gui, inputView *gocui.View) error {
 // Display text in "messages"
 func displayText(txt string) error {
 
-	messagesView, _ := clientGui.View("messages")
 	clientGui.Update(func(g *gocui.Gui) error {
+		messagesView, err := clientGui.View("messages")
+		if err != nil {
+			return fmt.Errorf("could not display text: %v\n", err)
+		}
 		fmt.Fprintln(messagesView, txt)
 		return nil
 	})

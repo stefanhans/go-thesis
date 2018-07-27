@@ -27,6 +27,10 @@ func startPublisher() error {
 			if err != nil {
 				log.Fatalf("failed to subscribe at already running Publisher: %v", err)
 			}
+
+			// Append text messages in "messages" view of subscriber
+			displayText(fmt.Sprintf("<%s (%s:%s) has joined>", selfMember.Name, selfMember.Ip, selfMember.Port))
+			
 			return nil
 		}
 
@@ -37,11 +41,18 @@ func startPublisher() error {
 
 	log.Printf("Started publishing service listening on %q\n", publishingService)
 
+	// Append text messages in "messages" view of publisher
+	displayText(fmt.Sprintf("<publishing service running: %s (%s:%s)>", selfMember.Name, serverIp, serverPort))
+
 	// Subscribe directly at started publishing service
 	selfMember.Leader = true
 	cgMember = append(cgMember, selfMember)
 	log.Printf("Subscribed directly at started publishing service: %v\n", cgMember[0])
 
+	// Append text messages in "messages" view of publisher
+	displayText(fmt.Sprintf("<%s (%s:%s) has joined>", selfMember.Name, selfMember.Ip, selfMember.Port))
+
+	// Endless loop in foreground of goroutine
 	for {
 		// Wait for a connection.
 		conn, err := listener.Accept()
