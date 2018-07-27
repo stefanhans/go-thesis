@@ -47,6 +47,9 @@ func main() {
 	// Switch logging to logfile
 	log.SetOutput(f)
 
+	// Initialize chat command usage
+	commandUsageInit()
+
 	// Try to start publishing service and subscribe accordingly
 	go func() {
 
@@ -76,26 +79,29 @@ func main() {
 	}()
 
 	// Start text-based UI
-	go func() {
-		err = runTUI()
-		if err != nil {
-			log.Fatalf("runTUI: %v", err)
-		}
-	}()
-
-	// Initialize chat command usage
-	commandUsageInit()
-
-	// todo: fix the sleep workaround
-	time.Sleep(time.Second)
-
-	// Display introductory message in text-based UI
-	if selfMember.Leader {
-
-		// Append text messages in "messages" view of publisher
-		displayText(fmt.Sprintf("<publishing service running: %s (%s:%s)>", selfMember.Name, selfMember.Ip, selfMember.Port))
-		displayText(fmt.Sprintf("<%s (%s:%s) has joined>", selfMember.Name, selfMember.Ip, selfMember.Port))
+	err = runTUI()
+	if err != nil {
+		log.Fatalf("runTUI: %v", err)
 	}
+
+	// Start text-based UI
+	//go func() {
+	//	err = runTUI()
+	//	if err != nil {
+	//		log.Fatalf("runTUI: %v", err)
+	//	}
+	//}()
+
+	//// todo: fix the sleep workaround
+	//time.Sleep(time.Second)
+	//
+	//// Display introductory message in text-based UI
+	//if selfMember.Leader {
+	//
+	//	// Append text messages in "messages" view of publisher
+	//	displayText(fmt.Sprintf("<publishing service running: %s (%s:%s)>", selfMember.Name, serverIp, serverPort))
+	//	displayText(fmt.Sprintf("<%s (%s:%s) has joined>", selfMember.Name, selfMember.Ip, selfMember.Port))
+	//}
 
 	// Keep running
 	for {

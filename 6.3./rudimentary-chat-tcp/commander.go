@@ -4,10 +4,14 @@ import (
 	"fmt"
 	"log"
 	"strings"
+
+	"bitbucket.org/stefanhans/go-thesis/6.3./rudimentary-chat-tcp/chat-group"
+	"sort"
 )
 
 var (
 	cmdUsage map[string]string
+	keys     []string
 )
 
 func commandUsageInit() {
@@ -17,6 +21,16 @@ func commandUsageInit() {
 	cmdUsage["list"] = "\\list"
 	cmdUsage["publisher"] = "\\publisher [details]"
 	cmdUsage["self"] = "\\self"
+	cmdUsage["subscribe"] = "\\subscribe <name> <ip> <port>"
+	cmdUsage["unsubscribe"] = "\\unsubscribe <name>"
+
+	// To store the keys in sorted order
+	for key := range cmdUsage {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	log.Printf("commandUsageInit: keys: %v\n", keys)
 }
 
 func executeCommand(commandline string) {
@@ -30,16 +44,28 @@ func executeCommand(commandline string) {
 		switch commandFields[0] {
 
 		case "clear":
+			log.Printf("CMD_CLEAR\n")
 			clear(commandFields[1:])
 
 		case "list":
+			log.Printf("CMD_LIST\n")
 			list(commandFields[1:])
 
 		case "publisher":
+			log.Printf("CMD_PUBLISHER\n")
 			publisher(commandFields[1:])
 
 		case "self":
+			log.Printf("CMD_SELF\n")
 			self(commandFields[1:])
+
+		case "subscribe":
+			log.Printf("CMD_SUBSCRIBE\n")
+			subscribe(commandFields[1:])
+
+		case "unsubscribe":
+			log.Printf("CMD_UNSUBSCRIBE\n")
+			unsubscribe(commandFields[1:])
 
 		default:
 			for _, value := range cmdUsage {
@@ -49,9 +75,8 @@ func executeCommand(commandline string) {
 		}
 
 	} else {
-		for _, value := range cmdUsage {
-
-			displayText(fmt.Sprintf("<CMD USAGE>: %s", value))
+		for _, key := range keys {
+			displayText(fmt.Sprintf("<CMD USAGE>: %s", cmdUsage[key]))
 		}
 	}
 }
@@ -78,21 +103,53 @@ func publisher(arguments []string) error {
 		switch arguments[0] {
 		case "details":
 
-			displayText(fmt.Sprintf("<PUBLISHER>: %v", selfMember))
+			displayText(fmt.Sprintf("<CMD_PUBLISHER>: %v", selfMember))
 		default:
 
-			displayText(fmt.Sprintf("<PUBLISHER>: Usage: %s", cmdUsage["publisher"]))
+			displayText(fmt.Sprintf("<CMD_PUBLISHER>: Usage: %s", cmdUsage["publisher"]))
 		}
 
 	} else {
 
-		displayText(fmt.Sprintf("<PUBLISHER>: %v", displayingService))
+		displayText(fmt.Sprintf("<CMD_PUBLISHER>: %v", displayingService))
 	}
 	return nil
 }
 
 func self(arguments []string) error {
-	displayText(fmt.Sprintf("<SELF>: %v", selfMember))
+	displayText(fmt.Sprintf("<CMD_SELF>: %v", selfMember))
 
+	return nil
+}
+
+func subscribe(arguments []string) error {
+	if len(arguments) >= 3 {
+		newMember := &chatgroup.Message{
+			MsgType: chatgroup.Message_SUBSCRIBE,
+			Sender:  &chatgroup.Member{Name: arguments[0], Ip: arguments[1], Port: arguments[2]}}
+
+		sendPublisherRequest(newMember)
+
+		// Append subscription message in "messages" view
+		displayText(fmt.Sprintf("<CMD_SUBSCRIBE>: %s (%s:%s) has joined", newMember.Sender.Name, newMember.Sender.Ip, newMember.Sender.Port))
+	} else {
+		displayText(fmt.Sprintf("<CMD_SUBSCRIBE>: Usage: %s", cmdUsage["subscribe"]))
+	}
+	return nil
+}
+
+func unsubscribe(arguments []string) error {
+	if len(arguments) > 0 {
+		leavingMember := &chatgroup.Message{
+			MsgType: chatgroup.Message_UNSUBSCRIBE,
+			Sender:  &chatgroup.Member{Name: arguments[0]}}
+
+		sendPublisherRequest(leavingMember)
+
+		// Append subscription message in "messages" view
+		displayText(fmt.Sprintf("<CMD_UNSUBSCRIBE>: %s (%s:%s) has left", leavingMember.Sender.Name))
+	} else {
+		displayText(fmt.Sprintf("<CMD_UNSUBSCRIBE>: Usage: %s", cmdUsage["unsubscribe"]))
+	}
 	return nil
 }

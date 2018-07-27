@@ -16,7 +16,7 @@ func Subscribe() error {
 		Sender:  selfMember}
 
 	// Append subscription message in "messages" view
-	displayText(fmt.Sprintf("<%s (%s:%s) has joined>", selfMember.Name, selfMember.Ip, selfMember.Port))
+	//displayText(fmt.Sprintf("<%s (%s:%s) has joined>", selfMember.Name, selfMember.Ip, selfMember.Port))
 
 	return sendPublisherRequest(newMember)
 }

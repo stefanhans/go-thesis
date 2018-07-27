@@ -7,7 +7,7 @@ import (
 const (
 
 	// Publishing service on a commonly known address
-	serverIp          string = "localhost"
+	serverIp          string = "192.168.1.126"
 	serverPort        string = "22365"
 	publishingService string = serverIp + ":" + serverPort
 
