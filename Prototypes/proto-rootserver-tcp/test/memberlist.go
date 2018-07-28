@@ -36,6 +36,13 @@ func main() {
 		Leader: false,
 	}}}
 
+	members.Member = append(members.Member, &membergroup.Member{
+		Name:   "George",
+		Ip:     "localhost",
+		Port:   "12348",
+		Leader: false,
+	})
+
 	fmt.Printf("%b\n", EOT)
 
 	// Create listener

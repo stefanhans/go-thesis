@@ -19,6 +19,7 @@ func commandUsageInit() {
 	cmdUsage = make(map[string]string)
 
 	cmdUsage["clear"] = "\\clear"
+	cmdUsage["dump"] = "\\dump"
 	cmdUsage["list"] = "\\list"
 	cmdUsage["log"] = "\\log"
 	cmdUsage["logfile"] = "\\logfile"
@@ -57,6 +58,11 @@ func executeCommand(commandline string) {
 		case "list":
 			log.Printf("CMD_LIST\n")
 			list(commandFields[1:])
+
+		// todo debug CMD_MEMBERLIST
+		case "memberlist":
+			log.Printf("CMD_MEMBERLIST\n")
+			memberlist(commandFields[1:])
 
 		case "log":
 			log.Printf("CMD_LOG\n")
@@ -103,6 +109,7 @@ func clear(arguments []string) error {
 	return nil
 }
 
+// todo enhance dump function - to filename, internals added
 func dump(arguments []string) error {
 
 	messagesView, _ := clientGui.View("messages")
@@ -113,6 +120,15 @@ func dump(arguments []string) error {
 func list(arguments []string) error {
 
 	err := List()
+	if err != nil {
+		log.Printf("could not request \\list: %v\n", err)
+	}
+	return nil
+}
+
+func memberlist(arguments []string) error {
+
+	err := MemberList()
 	if err != nil {
 		log.Printf("could not request \\list: %v\n", err)
 	}

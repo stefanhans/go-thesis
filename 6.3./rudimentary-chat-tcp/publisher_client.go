@@ -56,6 +56,22 @@ func List() error {
 	return sendPublisherRequest(message)
 }
 
+func MemberList() error {
+
+	message := &chatgroup.Message{
+		MsgType: chatgroup.Message_CMD_MEMBERLIST,
+		Sender:  selfMember}
+
+	// Append text message in "messages" view
+	displayText(fmt.Sprintf("%s", "<CMD MEMBERLIST>: Send request to publishing service..."))
+
+	return sendPublisherRequest(message)
+}
+
+
+
+// MEMBERLIST_REPLY
+
 // Dial publisher and return connection
 func sendPublisherRequest(message *chatgroup.Message) error {
 

@@ -23,8 +23,11 @@ message Message {
         DISPLAY_UNSUBSCRIPTION = 5;
         CMD_REPLY = 6;
         CMD_LIST = 7;
+        MEMBERLIST_REPLY = 8;
+        CMD_MEMBERLIST = 9;
     }
     MessageType msgType = 1;
     Member  sender = 2;
     string  text = 3;
+    MemberList memberList = 4;
 }

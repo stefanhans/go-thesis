@@ -158,6 +158,21 @@ func handlePublisherRequest(conn net.Conn) {
 		//	return
 		//}
 
+	case chatgroup.Message_CMD_MEMBERLIST:
+
+		log.Printf("CMD_MEMBERLIST: %v\n", msg)
+
+		// Handle the protobuf message: Member
+		err := handleCmdMemberList(&msg, addr)
+		if err != nil {
+			fmt.Printf("could not handleCmdMemberList from %v: %v", addr, err)
+		}
+
+		//_, err = conn.Write([]byte(""))
+		//if err != nil {
+		//	return
+		//}
+
 	default:
 
 		log.Printf("publisher: unknown message type %v\n", msg.MsgType)
@@ -247,6 +262,27 @@ func handleCmdList(message *chatgroup.Message, addr net.Addr) error {
 
 	return nil
 }
+
+func handleCmdMemberList(message *chatgroup.Message, addr net.Addr) error {
+
+	// Update remote IP address, if changed
+	updateRemoteIP(message, addr)
+
+	log.Printf("Memberlist request from %v: %q\n", message.Sender.Name, message.Text)
+
+	err := executeCmdMemberList(message)
+	if err != nil {
+		fmt.Errorf("Failed to execute memberlist request", err)
+	}
+
+	err = replyCmdRequest(message)
+	if err != nil {
+		fmt.Errorf("Failed to reply to  memberlist request", err)
+	}
+
+	return nil
+}
+
 
 func updateRemoteIP(msg *chatgroup.Message, addr net.Addr) {
 
@@ -344,3 +380,15 @@ func executeCmdList(message *chatgroup.Message) error {
 
 	return nil
 }
+
+
+func executeCmdMemberList(message *chatgroup.Message) error {
+
+	message.MemberList = &chatgroup.MemberList{Member:cgMember}
+
+	message.Sender.Name = selfMember.Name
+
+	return nil
+}
+
+

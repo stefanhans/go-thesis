@@ -121,6 +121,21 @@ func handleDisplayerRequest(conn net.Conn) {
 		//	return
 		//}
 
+
+	case chatgroup.Message_MEMBERLIST_REPLY:
+
+		// Handle the protobuf message: Member
+		err := handleMemberListReply(&msg)
+		if err != nil {
+			log.Printf("could not handleDisplayText from %v: %v", addr, err)
+		}
+
+		//_, err = conn.Write([]byte(""))
+		//if err != nil {
+		//	return
+		//}
+
+
 	default:
 
 		log.Printf("Displayer: unknown message type %v\n", msg.MsgType)
@@ -155,6 +170,14 @@ func handleCmdReply(msg *chatgroup.Message) error {
 
 	// Append text message in "messages" view
 	displayText(fmt.Sprintf("%s", msg.Text))
+
+	return nil
+}
+
+func handleMemberListReply(msg *chatgroup.Message) error {
+
+	// Append text message in "messages" view
+	displayText(fmt.Sprintf("%v", msg.MemberList))
 
 	return nil
 }

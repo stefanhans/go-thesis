@@ -37,6 +37,7 @@ func runTUI() error {
 	// Bind keys with functions
 	clientGui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit)
 	clientGui.SetKeybinding("input", gocui.KeyEnter, gocui.ModNone, send)
+	// todo fix up/down or remove it
 	clientGui.SetKeybinding("", gocui.KeyArrowDown, gocui.ModNone, up)
 	clientGui.SetKeybinding("", gocui.KeyArrowUp, gocui.ModNone, down)
 

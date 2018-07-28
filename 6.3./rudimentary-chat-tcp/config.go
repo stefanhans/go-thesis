@@ -23,6 +23,7 @@ var (
 	selfMember        *chatgroup.Member
 
 	// Publisher storage for member of chat group
+	// todo refactor chatgroup.memberlist instead of []*chatgroup.Member
 	cgMember []*chatgroup.Member
 
 	//
