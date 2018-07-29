@@ -13,7 +13,6 @@ message MemberList {
     repeated Member member = 1;
 }
 
-// Services are mapped by request/reply message types
 message Message {
     enum MessageType {
         // messages to handle subscriptions at the publishing service
@@ -27,6 +26,14 @@ message Message {
         // messages to publish chat messages via the publishing service
         PUBLISH_REQUEST = 4;
         PUBLISH_REPLY = 5;
+
+        // messages to inform about the list of members of the chat
+        MEMBERLIST_REQUEST = 6;
+        MEMBERLIST_REPLY = 7;
+
+        // messages to list members of the chat
+        CMD_LIST_REQUEST = 8;
+        CMD_LIST_REPLY = 9;
     }
     MessageType msgType = 1;
     Member  sender = 2;

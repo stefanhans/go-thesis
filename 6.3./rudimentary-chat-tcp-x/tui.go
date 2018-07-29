@@ -97,14 +97,13 @@ func send(g *gocui.Gui, inputView *gocui.View) error {
 
 	input := strings.Trim(inputView.Buffer(), "\n")
 
-	// Distinguish between command and chat mode by '\'-prefix
 	if strings.HasPrefix(input, "\\") {
 
 		// Interpret "input" as command
 		executeCommand(input)
 
 	} else {
-		// Send "input" to publish
+		// Send "input" to Publisher
 		Publish(input)
 	}
 
@@ -119,7 +118,6 @@ func send(g *gocui.Gui, inputView *gocui.View) error {
 // Display text in "messages"
 func displayText(txt string) error {
 
-	// Update the "messages" view as soon as possible
 	clientGui.Update(func(g *gocui.Gui) error {
 		messagesView, err := clientGui.View("messages")
 		if err != nil {

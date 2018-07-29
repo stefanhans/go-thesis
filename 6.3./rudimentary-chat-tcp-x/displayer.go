@@ -44,7 +44,6 @@ func handleDisplayerRequest(conn net.Conn) {
 
 	defer conn.Close()
 
-	// Read all data from the connection
 	var buf [512]byte
 	var data []byte
 	addr := conn.RemoteAddr()
@@ -57,50 +56,93 @@ func handleDisplayerRequest(conn net.Conn) {
 		data = append(data, buf[0:n]...)
 	}
 
-	log.Printf("Displayer received %v bytes\n", len(data))
+	log.Printf("Displayer received (%v bytes): %q\n", len(data), data)
 
-	// Unmarshall message
 	var msg chatgroup.Message
 	err := proto.Unmarshal(data, &msg)
 	if err != nil {
-		fmt.Errorf("could not unmarshall message: %v", err)
+		fmt.Errorf("could not unmarshall msg: %v", err)
 	}
 
 	log.Printf("msg from %v: %v\n", addr, msg)
 
-	// Switch according to the message type and call appropriate handler
+	// Switch according to the message type
 	switch msg.MsgType {
 
 	case chatgroup.Message_SUBSCRIBE_REPLY:
 
-		err := handleSubscribeReply(&msg)
+		// Handle the protobuf message: Member
+		err := handleDisplaySubscription(&msg)
 		if err != nil {
-			log.Printf("could not handleSubscribeReply from %v: %v", addr, err)
+			log.Printf("could not handleDisplaySubscription from %v: %v", addr, err)
 		}
+
+		//_, err = conn.Write([]byte(""))
+		//if err != nil {
+		//	return
+		//}
 
 	case chatgroup.Message_UNSUBSCRIBE_REPLY:
 
-		err := handleUnsubscribeReply(&msg)
+		// Handle the protobuf message: Member
+		err := handleDisplayUnsubscription(&msg)
 		if err != nil {
-			log.Printf("could not handleUnsubscribeReply from %v: %v", addr, err)
+			log.Printf("could not handleDisplayUnsubscription from %v: %v", addr, err)
 		}
+
+		//_, err = conn.Write([]byte(""))
+		//if err != nil {
+		//	return
+		//}
 
 	case chatgroup.Message_PUBLISH_REPLY:
 
 		// Handle the protobuf message: Member
-		err := handlePublishReply(&msg)
+		err := handleDisplayText(&msg)
 		if err != nil {
-			log.Printf("could not handlePublishReply from %v: %v", addr, err)
+			log.Printf("could not handleDisplayText from %v: %v", addr, err)
 		}
+
+		//_, err = conn.Write([]byte(""))
+		//if err != nil {
+		//	return
+		//}
+
+	case chatgroup.Message_CMD_LIST_REPLY:
+
+		// Handle the protobuf message: Member
+		err := handleCmdReply(&msg)
+		if err != nil {
+			log.Printf("could not handleDisplayText from %v: %v", addr, err)
+		}
+
+		//_, err = conn.Write([]byte(""))
+		//if err != nil {
+		//	return
+		//}
+
+
+	case chatgroup.Message_MEMBERLIST_REPLY:
+
+		// Handle the protobuf message: Member
+		err := handleMemberListReply(&msg)
+		if err != nil {
+			log.Printf("could not handleDisplayText from %v: %v", addr, err)
+		}
+
+		//_, err = conn.Write([]byte(""))
+		//if err != nil {
+		//	return
+		//}
+
 
 	default:
 
-		log.Printf("Reply: unknown message type %v\n", msg.MsgType)
+		log.Printf("Displayer: unknown message type %v\n", msg.MsgType)
 	}
 }
 
-// Display new member
-func handleSubscribeReply(msg *chatgroup.Message) error {
+func handleDisplaySubscription(msg *chatgroup.Message) error {
 
 	// Append text message in "messages" view
 	displayText(fmt.Sprintf("<%s (%s:%s) has joined>", msg.Sender.Name, msg.Sender.Ip, msg.Sender.Port))
@@ -108,7 +150,7 @@ func handleSubscribeReply(msg *chatgroup.Message) error {
 	return nil
 }
 
-func handleUnsubscribeReply(msg *chatgroup.Message) error {
+func handleDisplayUnsubscription(msg *chatgroup.Message) error {
 
 	// Append text message in "messages" view
 	displayText(fmt.Sprintf("<%s has left>", msg.Sender.Name))
@@ -116,11 +158,28 @@ func handleUnsubscribeReply(msg *chatgroup.Message) error {
 	return nil
 }
 
-func handlePublishReply(msg *chatgroup.Message) error {
+func handleDisplayText(msg *chatgroup.Message) error {
 
 	// Append text message in "messages" view
 	displayText(fmt.Sprintf("%s: %s", msg.Sender.Name, msg.Text))
 
 	return nil
 }
+
+func handleCmdReply(msg *chatgroup.Message) error {
+
+	// Append text message in "messages" view
+	displayText(fmt.Sprintf("%s", msg.Text))
+
+	return nil
+}
+
+func handleMemberListReply(msg *chatgroup.Message) error {
+
+	// Append text message in "messages" view
+	displayText(fmt.Sprintf("%#v", msg.MemberList))
+
+	return nil
+}
+
 

@@ -15,6 +15,9 @@ func Subscribe() error {
 		MsgType: chatgroup.Message_SUBSCRIBE_REQUEST,
 		Sender:  selfMember}
 
+	// Append subscription message in "messages" view
+	//displayText(fmt.Sprintf("<%s (%s:%s) has joined>", selfMember.Name, selfMember.Ip, selfMember.Port))
+
 	return sendPublisherRequest(newMember)
 }
 
@@ -41,6 +44,34 @@ func Publish(text string) error {
 	return sendPublisherRequest(message)
 }
 
+func MemberList() error {
+
+	message := &chatgroup.Message{
+		MsgType: chatgroup.Message_MEMBERLIST_REQUEST,
+		Sender:  selfMember}
+
+	// Append text message in "messages" view
+	displayText(fmt.Sprintf("%s", "<CMD MEMBERLIST>: Send request to publishing service..."))
+
+	return sendPublisherRequest(message)
+}
+
+func List() error {
+
+	message := &chatgroup.Message{
+		MsgType: chatgroup.Message_CMD_LIST_REQUEST,
+		Sender:  selfMember}
+
+	// Append text message in "messages" view
+	displayText(fmt.Sprintf("%s", "<CMD LIST>: Send request to publishing service..."))
+
+	return sendPublisherRequest(message)
+}
+
+
+
+// MEMBERLIST_REPLY
+
 // Dial publisher and return connection
 func sendPublisherRequest(message *chatgroup.Message) error {
 
@@ -63,6 +94,9 @@ func sendPublisherRequest(message *chatgroup.Message) error {
 	}
 	log.Printf("Message (%v byte) sent (%v byte): %v\n", len(byteArray), n, message)
 
-	// Close connection
+	// Receive reply
+	//conn.Read(byteArray)
+	//fmt.Printf("New member (%v byte) red: %v\n", len(byteArray), byteArray)
+
 	return conn.Close()
 }

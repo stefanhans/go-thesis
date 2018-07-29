@@ -76,6 +76,7 @@ func handlePublisherRequest(conn net.Conn) {
 
 	defer conn.Close()
 
+	// Read all data from the connection
 	var buf [512]byte
 	var data []byte
 	addr := conn.RemoteAddr()
@@ -90,88 +91,42 @@ func handlePublisherRequest(conn net.Conn) {
 
 	log.Printf("Publisher received %v bytes\n", len(data))
 
+	// Unmarshall message
 	var msg chatgroup.Message
 	err := proto.Unmarshal(data, &msg)
 	if err != nil {
 		fmt.Errorf("could not unmarshall message: %v", err)
 	}
 
-	// Switch according to the message type
+	// Switch according to the message type and call appropriate handler
 	switch msg.MsgType {
 
-	case chatgroup.Message_SUBSCRIBE:
+	case chatgroup.Message_SUBSCRIBE_REQUEST:
 
-		log.Printf("SUBSCRIBE: %v\n", msg)
+		log.Printf("SUBSCRIBE_REQUEST: %v\n", msg)
 
-		err := handleSubscribe(&msg, addr)
+		err := handleSubscribeRequest(&msg, addr)
 		if err != nil {
-			fmt.Printf("could not handleSubscribe from %v: %v", addr, err)
+			fmt.Printf("could not handleSubscribeRequest from %v: %v", addr, err)
 		}
 
-		//_, err = conn.Write([]byte(""))
-		//if err != nil {
-		//	return
-		//}
+	case chatgroup.Message_UNSUBSCRIBE_REQUEST:
 
-	case chatgroup.Message_UNSUBSCRIBE:
+		log.Printf("UNSUBSCRIBE_REQUEST: %v\n", msg)
 
-		log.Printf("UNSUBSCRIBE: %v\n", msg)
-
-		// Handle the protobuf message: Member
-		err := handleUnsubscribe(&msg)
+		err := handleUnsubscribeRequest(&msg)
 		if err != nil {
-			fmt.Printf("could not handleUnsubscribe from %v: %v", addr, err)
+			fmt.Printf("could not handleUnsubscribeRequest from %v: %v", addr, err)
 		}
 
-		//_, err = conn.Write([]byte(""))
-		//if err != nil {
-		//	return
-		//}
+	case chatgroup.Message_PUBLISH_REQUEST:
 
-	case chatgroup.Message_PUBLISH:
+		log.Printf("PUBLISH_REQUEST: %v\n", msg)
 
-		log.Printf("PUBLISH: %v\n", msg)
-
-		// Handle the protobuf message: Member
-		err := handlePublish(&msg, addr)
+		err := handlePublishRequest(&msg, addr)
 		if err != nil {
-			fmt.Printf("could not handlePublish from %v: %v", addr, err)
+			fmt.Printf("could not handlePublishRequest from %v: %v", addr, err)
 		}
-
-		//_, err = conn.Write([]byte(""))
-		//if err != nil {
-		//	return
-		//}
-
-	case chatgroup.Message_CMD_LIST:
-
-		log.Printf("CMD_LIST: %v\n", msg)
-
-		// Handle the protobuf message: Member
-		err := handleCmdList(&msg, addr)
-		if err != nil {
-			fmt.Printf("could not handleCmdList from %v: %v", addr, err)
-		}
-
-		//_, err = conn.Write([]byte(""))
-		//if err != nil {
-		//	return
-		//}
-
-	case chatgroup.Message_CMD_MEMBERLIST:
-
-		log.Printf("CMD_MEMBERLIST: %v\n", msg)
-
-		// Handle the protobuf message: Member
-		err := handleCmdMemberList(&msg, addr)
-		if err != nil {
-			fmt.Printf("could not handleCmdMemberList from %v: %v", addr, err)
-		}
-
-		//_, err = conn.Write([]byte(""))
-		//if err != nil {
-		//	return
-		//}
 
 	default:
 
@@ -179,7 +134,7 @@ func handlePublisherRequest(conn net.Conn) {
 	}
 }
 
-func handleSubscribe(message *chatgroup.Message, addr net.Addr) error {
+func handleSubscribeRequest(message *chatgroup.Message, addr net.Addr) error {
 
 	// Update remote IP address, if changed
 	updateRemoteIP(message, addr)
@@ -199,15 +154,15 @@ func handleSubscribe(message *chatgroup.Message, addr net.Addr) error {
 	cgMember = append(cgMember, message.Sender)
 	log.Printf("Current members registered: %v\n", cgMember)
 
-	err := publishDisplayerRequest(message, chatgroup.Message_DISPLAY_SUBSCRIPTION)
+	err := publishMessage(message, chatgroup.Message_SUBSCRIBE_REPLY)
 	if err != nil {
-		fmt.Errorf("Failed to publish Message_DISPLAY_SUBSCRIPTION", err)
+		fmt.Errorf("Failed to publish Message_SUBSCRIBE_REPLY", err)
 	}
 
 	return nil
 }
 
-func handleUnsubscribe(message *chatgroup.Message) error {
+func handleUnsubscribeRequest(message *chatgroup.Message) error {
 
 	log.Printf("Unregister: %v\n", message.Sender)
 
@@ -220,69 +175,28 @@ func handleUnsubscribe(message *chatgroup.Message) error {
 	}
 	log.Printf("Current members registered: %v\n", cgMember)
 
-	err := publishDisplayerRequest(message, chatgroup.Message_DISPLAY_UNSUBSCRIPTION)
+	err := publishMessage(message, chatgroup.Message_UNSUBSCRIBE_REPLY)
 	if err != nil {
-		fmt.Errorf("Failed to publish Message_DISPLAY_UNSUBSCRIPTION", err)
+		fmt.Errorf("Failed to publish Message_UNSUBSCRIBE_REPLY", err)
 	}
 
 	return nil
 }
 
-func handlePublish(message *chatgroup.Message, addr net.Addr) error {
+func handlePublishRequest(message *chatgroup.Message, addr net.Addr) error {
 
 	// Update remote IP address, if changed
 	updateRemoteIP(message, addr)
 
 	log.Printf("Publish from %v: %q\n", message.Sender.Name, message.Text)
 
-	err := publishDisplayerRequest(message, chatgroup.Message_DISPLAY_TEXT)
+	err := publishMessage(message, chatgroup.Message_PUBLISH_REPLY)
 	if err != nil {
-		fmt.Errorf("Failed to publish Message_DISPLAY_TEXT", err)
+		fmt.Errorf("Failed to publish Message_Message_PUBLISH_REPLY", err)
 	}
 
 	return nil
 }
-
-func handleCmdList(message *chatgroup.Message, addr net.Addr) error {
-
-	// Update remote IP address, if changed
-	updateRemoteIP(message, addr)
-
-	log.Printf("List request from %v: %q\n", message.Sender.Name, message.Text)
-
-	err := executeCmdList(message)
-	if err != nil {
-		fmt.Errorf("Failed to execute list request", err)
-	}
-
-	err = replyCmdRequest(message)
-	if err != nil {
-		fmt.Errorf("Failed to reply to list request", err)
-	}
-
-	return nil
-}
-
-func handleCmdMemberList(message *chatgroup.Message, addr net.Addr) error {
-
-	// Update remote IP address, if changed
-	updateRemoteIP(message, addr)
-
-	log.Printf("Memberlist request from %v: %q\n", message.Sender.Name, message.Text)
-
-	err := executeCmdMemberList(message)
-	if err != nil {
-		fmt.Errorf("Failed to execute memberlist request", err)
-	}
-
-	err = replyCmdRequest(message)
-	if err != nil {
-		fmt.Errorf("Failed to reply to  memberlist request", err)
-	}
-
-	return nil
-}
-
 
 func updateRemoteIP(msg *chatgroup.Message, addr net.Addr) {
 
@@ -293,11 +207,37 @@ func updateRemoteIP(msg *chatgroup.Message, addr net.Addr) {
 	}
 }
 
-func sendDisplayerRequest(message *chatgroup.Message, service string) error {
+// Publish a message to all members except the sender
+func publishMessage(message *chatgroup.Message, msgType chatgroup.Message_MessageType) error {
 
-	conn, err := net.Dial("tcp", service)
+	// Set the reply message type
+	message.MsgType = msgType
+
+	// Forward message to other chat group members
+	for _, recipient := range cgMember {
+
+		// Exclude sender
+		if recipient.Name != message.Sender.Name {
+
+			// Send message to recipient
+			log.Printf("From %s to %s (%s:%s): %q\n",
+				message.Sender.Name, recipient.Name, recipient.Ip, recipient.Port, message.Sender)
+			err := sendMessage(message, recipient.Ip+":"+recipient.Port)
+			if err != nil {
+				fmt.Errorf("Failed send reply", err)
+			}
+		}
+	}
+	return nil
+}
+
+// Send reply to the sender of the message
+func sendMessage(message *chatgroup.Message, recipient string) error {
+
+	// Connect to the recipient
+	conn, err := net.Dial("tcp", recipient)
 	if err != nil {
-		return fmt.Errorf("could not connect to displaying service: %v", err)
+		return fmt.Errorf("could not connect to recipient %q: %v", recipient, err)
 	}
 
 	// Marshal into binary format
@@ -306,89 +246,13 @@ func sendDisplayerRequest(message *chatgroup.Message, service string) error {
 		return fmt.Errorf("could not encode message: %v", err)
 	}
 
+	// Write the bytes to the connection
 	n, err := conn.Write(byteArray)
+	if err != nil {
+		return fmt.Errorf("could not write message to the connection: %v", err)
+	}
 	log.Printf("Message (%v byte) sent (%v byte): %v\n", len(byteArray), n, message)
 
-	//conn.Read(byteArray)
-	//fmt.Printf("New member (%v byte) red: %v\n", len(byteArray), byteArray)
-
-	// Receive reply
+	// Close connection
 	return conn.Close()
 }
-
-func publishDisplayerRequest(message *chatgroup.Message, msgType chatgroup.Message_MessageType) error {
-
-	message.MsgType = msgType
-
-	// Forward message to other chat group members
-	for _, recipient := range cgMember {
-
-		// Exclude sender and publisher from message forwarding
-		if recipient.Name != message.Sender.Name {
-			log.Printf("From %s to %s (%s:%s): %q\n",
-				message.Sender.Name, recipient.Name, recipient.Ip, recipient.Port, message.Sender)
-
-			err := sendDisplayerRequest(message, recipient.Ip+":"+recipient.Port)
-			if err != nil {
-				fmt.Errorf("Failed send displayer request", err)
-			}
-
-			//conn, err := net.Dial("tcp", recipient.Ip+":"+recipient.Port)
-			//if err != nil {
-			//	return fmt.Errorf("could not connect to displaying service: %v", err)
-			//}
-			//
-			//// Marshal into binary format
-			//byteArray, err := proto.Marshal(message)
-			//if err != nil {
-			//	return fmt.Errorf("could not encode message: %v", err)
-			//}
-			//
-			//n, err := conn.Write(byteArray)
-			//log.Printf("Message (%v byte) sent (%v byte): %v\n", len(byteArray), n, message)
-			//
-			//err = conn.Close()
-			//if err != nil {
-			//	return fmt.Errorf("could not close connection: %v", err)
-			//}
-		}
-	}
-	return nil
-}
-
-func replyCmdRequest(message *chatgroup.Message) error {
-
-	message.MsgType = chatgroup.Message_CMD_REPLY
-
-	err := sendDisplayerRequest(message, message.Sender.Ip+":"+message.Sender.Port)
-	if err != nil {
-		return fmt.Errorf("could not send command reply: %v", err)
-	}
-
-	return nil
-}
-
-func executeCmdList(message *chatgroup.Message) error {
-
-	text := ""
-	for i, member := range cgMember {
-		text += fmt.Sprintf("<LIST>: %v: %s\n", i, member)
-	}
-	message.Text = strings.Trim(text, "\n")
-
-	message.Sender.Name = selfMember.Name
-
-	return nil
-}
-
-
-func executeCmdMemberList(message *chatgroup.Message) error {
-
-	message.MemberList = &chatgroup.MemberList{Member:cgMember}
-
-	message.Sender.Name = selfMember.Name
-
-	return nil
-}
-
-
