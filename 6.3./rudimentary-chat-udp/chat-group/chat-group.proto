@@ -1,0 +1,35 @@
+syntax = 'proto3';
+
+package chatgroup;
+
+message Member {
+    string name = 1;
+    string ip = 2;
+    string port = 3;
+    bool leader = 4;
+}
+
+message MemberList {
+    repeated Member member = 1;
+}
+
+// Services are mapped by request/reply message types
+message Message {
+    enum MessageType {
+        // messages to handle subscriptions at the publishing service
+        SUBSCRIBE_REQUEST = 0;
+        SUBSCRIBE_REPLY = 1;
+
+        // messages to handle unsubscriptions at the publishing service
+        UNSUBSCRIBE_REQUEST = 2;
+        UNSUBSCRIBE_REPLY = 3;
+
+        // messages to publish chat messages via the publishing service
+        PUBLISH_REQUEST = 4;
+        PUBLISH_REPLY = 5;
+    }
+    MessageType msgType = 1;
+    Member  sender = 2;
+    string  text = 3;
+    MemberList memberList = 4;
+}
