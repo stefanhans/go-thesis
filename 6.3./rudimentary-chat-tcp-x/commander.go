@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"bitbucket.org/stefanhans/go-thesis/6.3./rudimentary-chat-tcp/chat-group"
-	"sort"
 	"io/ioutil"
+	"sort"
 )
 
 var (
@@ -137,7 +137,7 @@ func memberlist(arguments []string) error {
 func showLog(arguments []string) error {
 
 	data, err := ioutil.ReadFile(logfilename)
-	if err	!= nil {
+	if err != nil {
 		return fmt.Errorf("cannot read file %q: %v", logfilename, err)
 	}
 

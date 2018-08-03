@@ -98,38 +98,14 @@ func handlePublisherRequest(conn net.Conn) {
 		fmt.Errorf("could not unmarshall message: %v", err)
 	}
 
-	// Switch according to the message type and call appropriate handler
-	switch msg.MsgType {
-
-	case chatgroup.Message_SUBSCRIBE_REQUEST:
-
-		log.Printf("SUBSCRIBE_REQUEST: %v\n", msg)
-
-		err := handleSubscribeRequest(&msg, addr)
+	// Fetch the handler from a map by the message type and call it accordingly
+	if requestAction, ok := requestActionMap[msg.MsgType]; ok {
+		log.Printf("%v\n", msg)
+		err := requestAction(&msg, addr)
 		if err != nil {
-			fmt.Printf("could not handleSubscribeRequest from %v: %v", addr, err)
+			fmt.Printf("could not handle %v from %v: %v", msg.MsgType, addr, err)
 		}
-
-	case chatgroup.Message_UNSUBSCRIBE_REQUEST:
-
-		log.Printf("UNSUBSCRIBE_REQUEST: %v\n", msg)
-
-		err := handleUnsubscribeRequest(&msg)
-		if err != nil {
-			fmt.Printf("could not handleUnsubscribeRequest from %v: %v", addr, err)
-		}
-
-	case chatgroup.Message_PUBLISH_REQUEST:
-
-		log.Printf("PUBLISH_REQUEST: %v\n", msg)
-
-		err := handlePublishRequest(&msg, addr)
-		if err != nil {
-			fmt.Printf("could not handlePublishRequest from %v: %v", addr, err)
-		}
-
-	default:
-
+	} else {
 		log.Printf("publisher: unknown message type %v\n", msg.MsgType)
 	}
 }
@@ -162,7 +138,7 @@ func handleSubscribeRequest(message *chatgroup.Message, addr net.Addr) error {
 	return nil
 }
 
-func handleUnsubscribeRequest(message *chatgroup.Message) error {
+func handleUnsubscribeRequest(message *chatgroup.Message, addr net.Addr) error {
 
 	log.Printf("Unregister: %v\n", message.Sender)
 

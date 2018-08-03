@@ -6,8 +6,8 @@ import (
 	"net"
 
 	"bitbucket.org/stefanhans/go-thesis/Prototypes/proto-rootserver-udp/member-group"
-	"time"
 	"os"
+	"time"
 )
 
 var mbStorage []*membergroup.Member
@@ -20,7 +20,6 @@ var (
 )
 
 func main() {
-
 
 	// Prepare logfile for logging
 	year, month, day := time.Now().Date()
@@ -65,7 +64,8 @@ func main() {
 		}
 	}()
 
-	for {}
+	for {
+	}
 }
 
 // Read all incoming data, take the leading byte as message type,

@@ -28,5 +28,5 @@ var (
 
 	//
 	logfilename string
-	logfile *os.File
+	logfile     *os.File
 )

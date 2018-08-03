@@ -121,7 +121,6 @@ func handleDisplayerRequest(conn net.Conn) {
 		//	return
 		//}
 
-
 	case chatgroup.Message_MEMBERLIST_REPLY:
 
 		// Handle the protobuf message: Member
@@ -134,7 +133,6 @@ func handleDisplayerRequest(conn net.Conn) {
 		//if err != nil {
 		//	return
 		//}
-
 
 	default:
 
@@ -181,5 +179,3 @@ func handleMemberListReply(msg *chatgroup.Message) error {
 
 	return nil
 }
-
-

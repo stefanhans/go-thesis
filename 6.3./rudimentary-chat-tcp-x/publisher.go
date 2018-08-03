@@ -283,7 +283,6 @@ func handleCmdMemberList(message *chatgroup.Message, addr net.Addr) error {
 	return nil
 }
 
-
 func updateRemoteIP(msg *chatgroup.Message, addr net.Addr) {
 
 	// Check remote Ip address change of message
@@ -393,14 +392,11 @@ func executeCmdList(message *chatgroup.Message) error {
 	return nil
 }
 
-
 func executeCmdMemberList(message *chatgroup.Message) error {
 
-	message.MemberList = &chatgroup.MemberList{Member:cgMember}
+	message.MemberList = &chatgroup.MemberList{Member: cgMember}
 
 	message.Sender.Name = selfMember.Name
 
 	return nil
 }
-
-

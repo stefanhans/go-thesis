@@ -68,8 +68,6 @@ func List() error {
 	return sendPublisherRequest(message)
 }
 
-
-
 // MEMBERLIST_REPLY
 
 // Dial publisher and return connection
