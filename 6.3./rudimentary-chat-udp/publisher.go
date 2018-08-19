@@ -5,23 +5,18 @@ import (
 	"log"
 	"net"
 	"strings"
-	"syscall"
-
 	"bitbucket.org/stefanhans/go-thesis/6.3./rudimentary-chat-udp/chat-group"
 	"github.com/golang/protobuf/proto"
-)
-
-var (
-	l    net.PacketConn
-	n    int
-	addr net.Addr
+	"syscall"
+	"os"
 )
 
 // Start publisher service to provide member registration and message publishing
 func startPublisher() error {
 
-	// Create listener
-	listener, err := net.ListenPacket("udp", publishingService)
+	// Create publishingListener
+	publishingListener, err := net.ListenPacket("udp", publishingService)
+	log.Printf("LISTENER: %q\n", publishingService)
 
 	if err != nil {
 
@@ -43,12 +38,21 @@ func startPublisher() error {
 		// Exit on unexpected error
 		log.Fatalf("could not listen to %q: %v\n", publishingService, err)
 	}
-	defer listener.Close()
+	defer publishingListener.Close()
 
 	log.Printf("Started publishing service listening on %q\n", publishingService)
 
 	// Append text messages in "messages" view of publisher
 	displayText(fmt.Sprintf("<publishing service running: %s (%s:%s)>", selfMember.Name, serverIp, serverPort))
+
+
+	// Resolve IP string and update accordingly
+	addr, err := net.ResolveIPAddr("ip", selfMember.Ip)
+	if err != nil {
+		fmt.Printf("no valid ip address of client %q for publishing service: %v\n", selfMember.Ip, err.Error())
+		os.Exit(1)
+	}
+	selfMember.Ip = addr.String()
 
 	// Subscribe directly at started publishing service
 	selfMember.Leader = true
@@ -63,10 +67,12 @@ func startPublisher() error {
 
 	// Endless loop in foreground of goroutine
 	for {
-		n, addr, err = listener.ReadFrom(buffer)
+		n, addr, err := publishingListener.ReadFrom(buffer)
+
 		if err != nil {
-			log.Printf("cannot read from buffer:%v", err)
+			log.Printf("cannot read from buffer: %v\n", err)
 		} else {
+			//log.Printf("Read %v bytes from %v: %v\n", n, addr, buffer)
 			go func(buffer []byte, addr net.Addr) {
 				handlePublisherRequest(buffer, addr)
 
@@ -88,38 +94,14 @@ func handlePublisherRequest(data []byte, addr net.Addr) {
 		fmt.Errorf("could not unmarshall message: %v", err)
 	}
 
-	// Switch according to the message type and call appropriate handler
-	switch msg.MsgType {
-
-	case chatgroup.Message_SUBSCRIBE_REQUEST:
-
-		log.Printf("SUBSCRIBE_REQUEST: %v\n", msg)
-
-		err := handleSubscribeRequest(&msg, addr)
+	// Fetch the handler from a map by the message type and call it accordingly
+	if requestAction, ok := requestActionMap[msg.MsgType]; ok {
+		log.Printf("%v\n", msg)
+		err := requestAction(&msg, addr)
 		if err != nil {
-			fmt.Printf("could not handleSubscribeRequest from %v: %v", addr, err)
+			fmt.Printf("could not handle %v from %v: %v", msg.MsgType, addr, err)
 		}
-
-	case chatgroup.Message_UNSUBSCRIBE_REQUEST:
-
-		log.Printf("UNSUBSCRIBE_REQUEST: %v\n", msg)
-
-		err := handleUnsubscribeRequest(&msg)
-		if err != nil {
-			fmt.Printf("could not handleUnsubscribeRequest from %v: %v", addr, err)
-		}
-
-	case chatgroup.Message_PUBLISH_REQUEST:
-
-		log.Printf("PUBLISH_REQUEST: %v\n", msg)
-
-		err := handlePublishRequest(&msg, addr)
-		if err != nil {
-			fmt.Printf("could not handlePublishRequest from %v: %v", addr, err)
-		}
-
-	default:
-
+	} else {
 		log.Printf("publisher: unknown message type %v\n", msg.MsgType)
 	}
 }
@@ -152,7 +134,7 @@ func handleSubscribeRequest(message *chatgroup.Message, addr net.Addr) error {
 	return nil
 }
 
-func handleUnsubscribeRequest(message *chatgroup.Message) error {
+func handleUnsubscribeRequest(message *chatgroup.Message, addr net.Addr) error {
 
 	log.Printf("Unregister: %v\n", message.Sender)
 

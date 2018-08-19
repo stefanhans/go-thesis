@@ -12,19 +12,19 @@ import (
 // Start displayer service to provide displaying messages in the text-based UI
 func startDisplayer() error {
 
-	// Create listener
-	listener, err := net.Listen("tcp", displayingService)
+	// Create displayingListener
+	displayingListener, err := net.Listen("tcp", displayingService)
 
 	if err != nil {
 		log.Fatalf("could not listen to %q: %v\n", displayingService, err)
 	}
-	defer listener.Close()
+	defer displayingListener.Close()
 
 	log.Printf("Started displaying service listening on %q\n", displayingService)
 
 	for {
 		// Wait for a connection.
-		conn, err := listener.Accept()
+		conn, err := displayingListener.Accept()
 		if err != nil {
 			continue //log.Fatal(err)
 		}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	_ "net"
 
 	"bitbucket.org/stefanhans/go-thesis/6.3./rudimentary-chat-udp/chat-group"
 	"github.com/jroimartin/gocui"
@@ -21,7 +22,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "missing parameter: <name> <ip> <port>")
 		os.Exit(1)
 	}
-	selfMember = &chatgroup.Member{Name:flag.Arg(0), Ip:flag.Arg(1), Port:flag.Arg(2), Leader:false}
+	selfMember = &chatgroup.Member{Name: flag.Arg(0), Ip: flag.Arg(1), Port: flag.Arg(2), Leader: false}
 
 	// Prepare logfile for logging
 	year, month, day := time.Now().Date()
@@ -58,7 +59,6 @@ func main() {
 		fmt.Errorf("could not create tui: %v\n", err)
 	}
 	defer clientGui.Close()
-
 
 	// Try to start publishing service and subscribe accordingly
 	go func() {

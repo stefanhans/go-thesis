@@ -13,22 +13,23 @@ import (
 func startDisplayer() error {
 
 	// Create listener
-	listener, err := net.ListenPacket("udp", displayingService)
+	displayingListener, err := net.ListenPacket("udp", displayingService)
 
 	if err != nil {
 		log.Fatalf("could not listen to %q: %v\n", displayingService, err)
 	}
-	defer listener.Close()
+	defer displayingListener.Close()
 
 	log.Printf("Started displaying service listening on %q\n", displayingService)
 
 	buffer := make([]byte, bufferSize)
 
 	for {
-		n, addr, err = listener.ReadFrom(buffer)
+		n, addr, err := displayingListener.ReadFrom(buffer)
 		if err != nil {
-			log.Printf("cannot read from buffer:%v", err)
+			log.Printf("cannot read from buffer: %v", err)
 		} else {
+			//log.Printf("Read %v bytes from %v: %v\n", n, addr, buffer)
 			go func(buffer []byte, addr net.Addr) {
 				handleDisplayerRequest(buffer, addr)
 
@@ -52,34 +53,15 @@ func handleDisplayerRequest(data []byte, addr net.Addr) {
 
 	log.Printf("msg from %v: %v\n", addr, msg)
 
-	// Switch according to the message type and call appropriate handler
-	switch msg.MsgType {
-
-	case chatgroup.Message_SUBSCRIBE_REPLY:
-
-		err := handleSubscribeReply(&msg)
+	// Fetch the handler from a map by the message type and call it accordingly
+	if replyAction, ok := replyActionMap[msg.MsgType]; ok {
+		log.Printf("%v\n", msg)
+		err := replyAction(&msg)
 		if err != nil {
-			log.Printf("could not handleSubscribeReply from %v: %v", addr, err)
+			fmt.Printf("could not handle %v from %v: %v", msg.MsgType, addr, err)
 		}
-
-	case chatgroup.Message_UNSUBSCRIBE_REPLY:
-
-		err := handleUnsubscribeReply(&msg)
-		if err != nil {
-			log.Printf("could not handleUnsubscribeReply from %v: %v", addr, err)
-		}
-
-	case chatgroup.Message_PUBLISH_REPLY:
-
-		// Handle the protobuf message: Member
-		err := handlePublishReply(&msg)
-		if err != nil {
-			log.Printf("could not handlePublishReply from %v: %v", addr, err)
-		}
-
-	default:
-
-		log.Printf("Reply: unknown message type %v\n", msg.MsgType)
+	} else {
+		log.Printf("displayer: unknown message type %v\n", msg.MsgType)
 	}
 }
 

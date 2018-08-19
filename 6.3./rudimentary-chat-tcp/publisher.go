@@ -14,8 +14,8 @@ import (
 // Start publisher service to provide member registration and message publishing
 func startPublisher() error {
 
-	// Create listener
-	listener, err := net.Listen("tcp", publishingService)
+	// Create publishingListener
+	publishingListener, err := net.Listen("tcp", publishingService)
 
 	if err != nil {
 
@@ -37,7 +37,7 @@ func startPublisher() error {
 		// Exit on unexpected error
 		log.Fatalf("could not listen to %q: %v\n", publishingService, err)
 	}
-	defer listener.Close()
+	defer publishingListener.Close()
 
 	log.Printf("Started publishing service listening on %q\n", publishingService)
 
@@ -55,9 +55,9 @@ func startPublisher() error {
 	// Endless loop in foreground of goroutine
 	for {
 		// Wait for a connection.
-		conn, err := listener.Accept()
+		conn, err := publishingListener.Accept()
 		if err != nil {
-			log.Printf("failed to accept connection from publishing service listener: %s\n", err)
+			log.Printf("failed to accept connection from publishing service publishingListener: %s\n", err)
 			continue
 		}
 
