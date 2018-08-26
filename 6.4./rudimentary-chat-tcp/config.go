@@ -11,9 +11,9 @@ const (
 	// Publishing service on a commonly known address
 	//serverIp          string = "192.168.1.126"
 
-	serverIp          string = "localhost"
-	serverPort        string = "22365"
-	publishingService string = serverIp + ":" + serverPort
+	serverIp      string = "localhost"
+	serverPort    string = "22365"
+	leaderService string = serverIp + ":" + serverPort
 
 	// Switch debugging
 	debug bool = true

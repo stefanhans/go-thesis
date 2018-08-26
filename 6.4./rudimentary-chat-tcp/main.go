@@ -59,20 +59,28 @@ func main() {
 	}
 	defer clientGui.Close()
 
-	// Try to start publishing service and subscribe accordingly
+	// Try to start leader service and subscribe accordingly
 	go func() {
 
-		err := startPublisher()
+		err := startLeaderService()
 
-		// Check if Publisher is "already in use"
+		// Check if LeaderService known address is "already in use"
 		if err != nil && strings.Contains(err.Error(), syscall.EADDRINUSE.Error()) {
 
-			// Subscribe to the already running publishing service
-			err = Subscribe()
+			// Request leader list
+			err = RequestLeaderlist()
 			if err != nil {
-				log.Fatalf("Failed to subscribe to running publishing service: %v", err)
+				log.Fatalf("failed to request leader list: %v", err)
 			}
-			log.Printf("Subscribed to the already running publishing service\n")
+
+
+
+			//// Subscribe to the already running publishing service
+			//err = Subscribe()
+			//if err != nil {
+			//	log.Fatalf("failed to subscribe to running publishing service: %v", err)
+			//}
+			//log.Printf("Subscribed to the already running publishing service\n")
 		}
 	}()
 

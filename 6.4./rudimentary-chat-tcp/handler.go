@@ -18,8 +18,10 @@ var actionMap = map[chatgroup.Message_MessageType]func(*chatgroup.Message, net.A
 	chatgroup.Message_PUBLISH_REPLY:       handlePublishReply,
 	chatgroup.Message_MEMBERLIST_REQUEST:  handleMemberlistRequest,
 	chatgroup.Message_MEMBERLIST_REPLY:    handleMemberlistReply,
-	chatgroup.Message_MEMBERLIST_REQUEST:  handleMemberlistRequest,
-	chatgroup.Message_MEMBERLIST_REPLY:    handleMemberlistReply,
+	chatgroup.Message_LEADERLIST_REQUEST:  handleLeaderlistRequest,
+	chatgroup.Message_LEADERLIST_REPLY:    handleLeaderlistReply,
+	chatgroup.Message_ECHO_REQUEST:        handleEchoRequest,
+	chatgroup.Message_ECHO_REPLY:          handleEchoReply,
 }
 
 func handleSubscribeRequest(message *chatgroup.Message, addr net.Addr) error {
@@ -133,6 +135,84 @@ func handleMemberlistRequest(message *chatgroup.Message, addr net.Addr) error {
 }
 
 func handleMemberlistReply(message *chatgroup.Message, addr net.Addr) error {
+
+	selfMemberList = message.MemberList.Member
+
+	displayText(fmt.Sprintf("<CMD_SYNC_REPLY>: reply received from %v:%v - call \\list",
+		message.Sender.Ip, message.Sender.Port))
+	return nil
+}
+
+func handleLeaderlistRequest(message *chatgroup.Message, addr net.Addr) error {
+
+	// Update remote IP address, if changed
+	updateRemoteIP(message, addr)
+
+	// Address string to reply requestor
+	requestor := message.Sender.Ip + ":" + message.Sender.Port
+
+	// Change message for reply
+	message.MsgType = chatgroup.Message_LEADERLIST_REPLY
+	message.Sender = selfMember
+	message.MemberList.Member = getLeaderlist()
+
+	// Send message to requestor
+	err := sendMessage(message, requestor)
+	if err != nil {
+		return fmt.Errorf("failed send reply: %v", err)
+	}
+	return nil
+}
+
+func getLeaderlist() []*chatgroup.Member {
+
+	leaderlist := make([]*chatgroup.Member, len(selfMemberList))
+
+	for _, member := range selfMemberList {
+		if member.Leader {
+			leaderlist = append(leaderlist, member)
+		}
+	}
+
+	if len(leaderlist) == 0 {
+		selfMember.Leader = true
+		leaderlist = append(leaderlist, selfMember)
+	}
+
+	return leaderlist
+}
+
+func handleLeaderlistReply(message *chatgroup.Message, addr net.Addr) error {
+
+	selfMemberList = message.MemberList.Member
+
+	displayText(fmt.Sprintf("<CMD_SYNC_REPLY>: reply received from %v:%v - call \\list",
+		message.Sender.Ip, message.Sender.Port))
+	return nil
+}
+
+func handleEchoRequest(message *chatgroup.Message, addr net.Addr) error {
+
+	// Update remote IP address, if changed
+	updateRemoteIP(message, addr)
+
+	// Address string to reply requestor
+	requestor := message.Sender.Ip + ":" + message.Sender.Port
+
+	// Change message for reply
+	message.MsgType = chatgroup.Message_LEADERLIST_REPLY
+	message.Sender = selfMember
+	message.MemberList.Member = selfMemberList
+
+	// Send message to requestor
+	err := sendMessage(message, requestor)
+	if err != nil {
+		return fmt.Errorf("failed send reply: %v", err)
+	}
+	return nil
+}
+
+func handleEchoReply(message *chatgroup.Message, addr net.Addr) error {
 
 	selfMemberList = message.MemberList.Member
 

@@ -32,9 +32,13 @@ message Message {
         MEMBERLIST_REQUEST = 6;
         MEMBERLIST_REPLY = 7;
 
+        // messages to request a list of leading members
+        LEADERLIST_REQUEST = 8;
+        LEADERLIST_REPLY = 9;
+
         // messages to request an echo of message text from member
-        ECHO_REQUEST = 8;
-        ECHO_REPLY = 9;
+        ECHO_REQUEST = 10;
+        ECHO_REPLY = 11;
     }
     MessageType msgType = 1;
     Member  sender = 2;

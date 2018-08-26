@@ -13,10 +13,10 @@ import (
 
 
 // Start publisher service to provide member registration and message publishing
-func startPublisher() error {
+func startLeaderService() error {
 
 	// Create publishingListener
-	publishingListener, err := net.Listen("tcp", publishingService)
+	publishingListener, err := net.Listen("tcp", leaderService)
 
 	if err != nil {
 
@@ -36,11 +36,11 @@ func startPublisher() error {
 		}
 
 		// Exit on unexpected error
-		log.Fatalf("could not listen to %q: %v\n", publishingService, err)
+		log.Fatalf("could not listen to %q: %v\n", leaderService, err)
 	}
 	defer publishingListener.Close()
 
-	log.Printf("Started publishing service listening on %q\n", publishingService)
+	log.Printf("Started publishing service listening on %q\n", leaderService)
 
 	// Append text messages in "messages" view of publisher
 	displayText(fmt.Sprintf("<publishing service running: %s (%s:%s)>", selfMember.Name, serverIp, serverPort))
@@ -111,6 +111,14 @@ func handlePublisherRequest(conn net.Conn) {
 	}
 }
 
+func RequestLeaderlist() error {
+
+	newMember := &chatgroup.Message{
+		MsgType: chatgroup.Message_LEADERLIST_REQUEST,
+		Sender:  selfMember}
+
+	return sendMessage(newMember, leaderService)
+}
 
 func Subscribe() error {
 
@@ -148,7 +156,7 @@ func Publish(text string) error {
 func sendPublisherRequest(message *chatgroup.Message) error {
 
 	// Connect to publishing service
-	conn, err := net.Dial("tcp", publishingService)
+	conn, err := net.Dial("tcp", leaderService)
 	if err != nil {
 		return fmt.Errorf("could not connect to publishing service: %v", err)
 	}

@@ -110,7 +110,7 @@ func showLogfile(arguments []string) {
 
 func publisher(arguments []string) {
 
-	displayText(fmt.Sprintf("<CMD_PUBLISHER>: %v", publishingService))
+	displayText(fmt.Sprintf("<CMD_PUBLISHER>: %v", leaderService))
 }
 
 func self(arguments []string) {
@@ -136,7 +136,7 @@ func syncMemberlist(arguments []string) {
 		displayText(fmt.Sprintf("<CMD_SYNC_ERR>: %v", err))
 		return
 	}
-	displayText(fmt.Sprintf("<CMD_SYNC_REQUEST>: request sent to %v", publishingService))
+	displayText(fmt.Sprintf("<CMD_SYNC_REQUEST>: request sent to %v", leaderService))
 }
 
 func echoFromMemberlist(arguments []string) {

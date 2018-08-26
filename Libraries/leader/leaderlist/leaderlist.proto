@@ -1,0 +1,35 @@
+syntax = 'proto3';
+
+package leaderlist;
+
+message Leader {
+    enum LeaderStatus {
+        UNKNOWN = 0;    // Default value, if not explicitly set
+        SERVICE = 1;    // Marks the (one and only) server, Todo ? CanServiceBeLeader
+        WORKING = 2;    // Marks the (one and only) leader
+        CANDIDATE = 3;  // Initial value and used during leader election
+
+        // Not to be assigned to leader
+        NOTFOUND = 4;   // Return value, if no requested leader found in list
+    }
+    string name = 1;
+    string ip = 2;
+    string port = 3;
+    LeaderStatus status = 4;
+}
+
+message LeaderList {
+    repeated Leader leader = 1;
+}
+
+// Services are mapped by request/reply message types
+message Message {
+    enum MessageType {
+        // messages to sync a list of leaders
+        LEADER_SYNC_REQUEST = 0;
+        LEADER_SYNC_REPLY = 1;
+    }
+    MessageType msgType = 1;
+    Leader  sender = 2;
+    LeaderList leaderList = 4;
+}
