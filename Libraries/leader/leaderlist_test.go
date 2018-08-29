@@ -7,30 +7,12 @@ import (
 	"bitbucket.org/stefanhans/go-thesis/Libraries/leader/leaderlist"
 )
 
-var (
-	serviceLeaderlist = "testlist"
-	serviceMember     = "service"
-	serviceIp         = "127.0.0.1"
-	servicePort       = 22365
-
-	testleaders *Leaderlist
-
-	err error
-)
-
 func TestServiceLeaderlist(t *testing.T) {
-	config := &Config{
-		Leaderlist: serviceLeaderlist,
-		Member:     serviceMember,
-		Ip:         serviceIp,
-		Port:       servicePort,
-		Status:     leaderlist.Leader_SERVICE,
-		Transport:  "TCP",
-	}
 
-	testleaders, err = NewLeaderlist(config)
+	testleaders, err := NewLeaderlist("testlist", "localhost", 22365, "alice",
+		"localhost", 12345, leaderlist.Leader_CANDIDATE)
 	if err != nil {
-		log.Fatalf("could not create NewLeaderlist: %v", err)
+		log.Fatalf("could not create new leaderlist: %v", err)
 	}
 	if testleaders.String() != "" {
 

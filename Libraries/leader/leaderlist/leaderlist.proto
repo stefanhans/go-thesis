@@ -10,7 +10,7 @@ message Leader {
         CANDIDATE = 3;  // Initial value and used during leader election
 
         // Not to be assigned to leader
-        NOTFOUND = 4;   // Return value, if no requested leader found in list
+        NOTFOUND = 4;   // Return value, if no requested leader found (in list)
     }
     string name = 1;
     string ip = 2;
@@ -28,6 +28,8 @@ message Message {
         // messages to sync a list of leaders
         LEADER_SYNC_REQUEST = 0;
         LEADER_SYNC_REPLY = 1;
+        PING_REQUEST = 2;
+        PING_REPLY = 3;
     }
     MessageType msgType = 1;
     Leader  sender = 2;

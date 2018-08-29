@@ -56,17 +56,17 @@ func (leaderlist *Leaderlist) handleLeaderSyncRequest(message *leadlist.Message,
 
 	// Add sender, if not present
 	exists := false
-	for _, l := range leaderlist.list {
+	for _, l := range leaderlist.List {
 		if l.Name == message.Sender.Name {
 			exists = true
 			break
 		}
 	}
-	glog.V(3).Infof("Added sender: %v", leaderlist.list)
+	glog.V(3).Infof("Added sender: %v", leaderlist.List)
 
 	if !exists {
 		message.Sender.Status = leadlist.Leader_UNKNOWN
-		leaderlist.list = append(leaderlist.list, message.Sender)
+		leaderlist.List = append(leaderlist.List, message.Sender)
 	}
 
 	// No leader found
@@ -76,7 +76,7 @@ func (leaderlist *Leaderlist) handleLeaderSyncRequest(message *leadlist.Message,
 		leaderSet := false
 		for _, msgl := range message.LeaderList.Leader {
 			if msgl.Status == leadlist.Leader_WORKING {
-				for _, l := range leaderlist.list {
+				for _, l := range leaderlist.List {
 					if l.Name == msgl.Name {
 						l.Status = leadlist.Leader_WORKING
 						leaderSet = true
@@ -89,7 +89,7 @@ func (leaderlist *Leaderlist) handleLeaderSyncRequest(message *leadlist.Message,
 
 		// Set sender as leader, if needed
 		if !leaderSet {
-			for _, l := range leaderlist.list {
+			for _, l := range leaderlist.List {
 				if l.Name == message.Sender.Name {
 					l.Status = leadlist.Leader_WORKING
 					break
@@ -103,9 +103,11 @@ func (leaderlist *Leaderlist) handleLeaderSyncRequest(message *leadlist.Message,
 
 	leaderlist.Message.MsgType = leadlist.Message_LEADER_SYNC_REPLY
 	leaderlist.Message.Sender = message.Sender
-	err := leaderlist.sendSyncReply(leaderlist.Message)
+	leaderlist.Message.LeaderList.Leader = leaderlist.List
+
+	err :=  leaderlist.TcpSend(leaderlist.Message, message.Sender.Ip+":"+message.Sender.Port)
 	if err != nil {
-		fmt.Printf("sendSyncReply: %v: %v", message, err)
+		fmt.Printf("TcpSend: %v: %v", message, err)
 	}
 
 	return nil
@@ -114,10 +116,32 @@ func (leaderlist *Leaderlist) handleLeaderSyncRequest(message *leadlist.Message,
 func (leaderlist *Leaderlist) handleLeaderSyncReply(message *leadlist.Message, addr net.Addr) error {
 	glog.Info(message)
 
-	leaderlist.list = message.LeaderList.Leader
+	leaderlist.List = message.LeaderList.Leader
 
-	glog.V(2).Infof("Replace list with (new) list: %q", leaderlist.list)
+	glog.V(2).Infof("Replace List with (new) List: %q", leaderlist.List)
 	glog.V(3).Infof("chatleaders: %v", leaderlist)
+
+	return nil
+}
+
+func (leaderlist *Leaderlist) handlePingRequest(message *leadlist.Message, addr net.Addr) error {
+
+	// Update remote IP address, if changed
+	leaderlist.updateRemoteIP(message, addr)
+
+	leaderlist.Message.MsgType = leadlist.Message_PING_REPLY
+	leaderlist.Message.Sender = leaderlist.member
+
+	err :=  leaderlist.TcpSend(leaderlist.Message, message.Sender.Ip+":"+message.Sender.Port)
+	if err != nil {
+		fmt.Printf("TcpSend: %v: %v", message, err)
+	}
+
+	return nil
+}
+
+func (leaderlist *Leaderlist) handlePingReply(message *leadlist.Message, addr net.Addr) error {
+	glog.Info(message)
 
 	return nil
 }
@@ -131,10 +155,10 @@ func (leaderlist *Leaderlist) updateRemoteIP(msg *leadlist.Message, addr net.Add
 		// Update message's sender
 		msg.Sender.Ip = strings.Split(addr.String(), ":")[0]
 
-		// Update leader list
-		for i, l := range leaderlist.list {
+		// Update leader List
+		for i, l := range leaderlist.List {
 			if l.Name == msg.Sender.Name {
-				leaderlist.list[i].Ip = strings.Split(addr.String(), ":")[0]
+				leaderlist.List[i].Ip = strings.Split(addr.String(), ":")[0]
 				break
 			}
 		}
@@ -145,14 +169,14 @@ func (leaderlist *Leaderlist) updateRemoteIP(msg *leadlist.Message, addr net.Add
 func (leaderlist *Leaderlist) sendSyncReply(message *leadlist.Message) error {
 
 	leaderlist.Message.MsgType = leadlist.Message_LEADER_SYNC_REPLY
-	leaderlist.Message.LeaderList.Leader = leaderlist.list
+	leaderlist.Message.LeaderList.Leader = leaderlist.List
 
 	return leaderlist.TcpSend(leaderlist.Message, message.Sender.Ip+":"+message.Sender.Port)
 }
 
 func (leaderlist *Leaderlist) leaderCount() int {
 	cnt := 0
-	for _, l := range leaderlist.list {
+	for _, l := range leaderlist.List {
 		if l.Status == leadlist.Leader_WORKING {
 			cnt++
 		}
