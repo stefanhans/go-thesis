@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	leadlist "bitbucket.org/stefanhans/go-thesis/Libraries/leader/leaderlist"
-	"log"
 )
 
 func NewLeaderlist(name string,
@@ -48,6 +47,7 @@ func NewLeaderlist(name string,
 
 	leader := &Leaderlist{
 		name:    name,
+		leaderVersion: 0,
 		serviceIp: serviceIp,
 		servicePort: servicePort,
 		member: member,
@@ -109,18 +109,41 @@ func (leaderlist *Leaderlist) ServicePort() int {
 	return leaderlist.servicePort
 }
 
-func (leaderlist *Leaderlist) RunService() error {
-
-	go leaderlist.TcpListen(fmt.Sprintf("%s:%d", leaderlist.serviceIp, leaderlist.servicePort))
-
-	return nil
+func (leaderlist *Leaderlist) SetMemberStatus(memberStatus leadlist.Leader_LeaderStatus) {
+	leaderlist.member.Status = memberStatus
 }
 
-func (leaderlist *Leaderlist) RunClient() error {
+func (leaderlist *Leaderlist) MemberStatus() leadlist.Leader_LeaderStatus {
 
-	go leaderlist.TcpListen(fmt.Sprintf("%s:%s", leaderlist.member.Ip, leaderlist.member.Port))
+	return leaderlist.member.Status
+}
 
-	return nil
+
+
+func (leaderlist *Leaderlist) LeaderAddress() string {
+
+	for _, m := range leaderlist.List {
+		if m.Status == leadlist.Leader_WORKING {
+			return fmt.Sprintf("%s:%s", m.Ip, m.Port)
+		}
+	}
+	return ""
+}
+func (leaderlist *Leaderlist) LeaderVersion() int {
+
+	return leaderlist.leaderVersion
+}
+
+func (leaderlist *Leaderlist) RunService() (bool, error) {
+
+	return leaderlist.TcpListen(fmt.Sprintf("%s:%d", leaderlist.serviceIp, leaderlist.servicePort),
+		true)
+}
+
+func (leaderlist *Leaderlist) RunClient() (bool, error) {
+
+	return leaderlist.TcpListen(fmt.Sprintf("%s:%s", leaderlist.member.Ip, leaderlist.member.Port),
+		false)
 }
 
 func (leaderlist *Leaderlist) SyncService() error {
@@ -137,11 +160,9 @@ func (leaderlist *Leaderlist) PingMember(member string) error {
 
 		if m.Name == member {
 			leaderlist.Message.MsgType = leadlist.Message_PING_REQUEST
-			err := leaderlist.TcpSend(leaderlist.Message, fmt.Sprintf("%s:%s", m.Ip, m.Port))
-			if err != nil {
-				log.Fatalf("could not ping member: %v", err)
-			}
+			return leaderlist.TcpSend(leaderlist.Message, fmt.Sprintf("%s:%s", m.Ip, m.Port))
 		}
 	}
+	// todo error member not found
 	return nil
 }

@@ -3,6 +3,8 @@ package leader
 import (
 	"fmt"
 	"net"
+	"syscall"
+
 	"bitbucket.org/stefanhans/go-thesis/Libraries/leader/leaderlist"
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/proto"
@@ -11,47 +13,61 @@ import (
 // Leaderlist has only one leader with status WORKING, which is the actual leader
 type Leaderlist struct {
 	name string
+	leaderVersion int
 
 	serviceIp   string
 	servicePort int
 
 	member *leaderlist.Leader
-	List    []*leaderlist.Leader
+	List   []*leaderlist.Leader
 
-	Message          *leaderlist.Message
-	actionMap        map[leaderlist.Message_MessageType]func(*leaderlist.Message, net.Addr) error
+	Message   *leaderlist.Message
+	actionMap map[leaderlist.Message_MessageType]func(*leaderlist.Message, net.Addr) error
 }
 
+func (leaderlist *Leaderlist) TcpListen(addr string, acceptAddrInUse bool) (bool, error) {
 
-func (leaderlist *Leaderlist) TcpListen(addr string) {
+	glog.V(3).Infof("TcpListen(%v)", addr)
 
-	// Create listener
+	// Try to create listener
 	listener, err := net.Listen("tcp", addr)
 
 	if err != nil {
-		glog.Fatalf("could not listen to %q: %v\n", addr, err)
-	}
-	defer listener.Close()
 
-	glog.Infof("Started List service listening on %q\n", addr)
-
-	for {
-		// Wait for a connection.
-		conn, err := listener.Accept()
-		if err != nil {
-			continue
+		// "address already in use" error
+		if acceptAddrInUse {
+			if err == syscall.EADDRINUSE {
+				return false, nil
+			}
 		}
 
-		// Handle the connection in a new goroutine.
-		// The loop then returns to accepting, so that
-		// multiple connections may be served concurrently.
-		go leaderlist.handleRequest(conn)
+		// Unexpected error
+		return false, err
 	}
+
+	// Goroutine for handling requests
+	go func(listener net.Listener) {
+		defer listener.Close()
+		for {
+			// Wait for a connection.
+			conn, err := listener.Accept()
+			if err != nil {
+				continue
+			}
+
+			// Handle the connection in a new goroutine.
+			// The loop then returns to accepting, so that
+			// multiple connections may be served concurrently.
+			go leaderlist.handleRequest(conn)
+		}
+	}(listener)
+	return true, nil
 }
 
 func (leaderlist *Leaderlist) TcpSend(message *leaderlist.Message, recipient string) error {
 
-	glog.V(2).Infof("TcpSend: %v", message)
+	glog.V(2).Infof("TcpSend(%v, %v)", message, recipient)
+	glog.V(2).Infof("message.MsgType: %v", message.MsgType)
 
 	// Connect to the recipient
 	conn, err := net.Dial("tcp", recipient)

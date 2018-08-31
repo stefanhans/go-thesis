@@ -35,7 +35,8 @@ func (leaderlist *Leaderlist) handleRequest(conn net.Conn) {
 	var msg leadlist.Message
 	err := proto.Unmarshal(data, &msg)
 	if err != nil {
-		fmt.Printf("could not unmarshall leadergroup.Message: %v", err)
+		fmt.Printf("could not unmarshall leadergroup.Message: %v\n", err)
+		return
 	}
 
 	glog.Info(msg)
@@ -52,7 +53,9 @@ func (leaderlist *Leaderlist) handleRequest(conn net.Conn) {
 }
 
 func (leaderlist *Leaderlist) handleLeaderSyncRequest(message *leadlist.Message, addr net.Addr) error {
-	glog.V(3).Info(message)
+	glog.V(3).Infof("handleLeaderSyncRequest(%v, %v)", message, addr)
+
+	updateVersion := false
 
 	// Add sender, if not present
 	exists := false
@@ -62,11 +65,14 @@ func (leaderlist *Leaderlist) handleLeaderSyncRequest(message *leadlist.Message,
 			break
 		}
 	}
-	glog.V(3).Infof("Added sender: %v", leaderlist.List)
 
 	if !exists {
-		message.Sender.Status = leadlist.Leader_UNKNOWN
+		message.Sender.Status = leadlist.Leader_CANDIDATE
 		leaderlist.List = append(leaderlist.List, message.Sender)
+
+		updateVersion = true
+
+		glog.V(3).Infof("Added sender: %v", leaderlist.List)
 	}
 
 	// No leader found
@@ -92,6 +98,7 @@ func (leaderlist *Leaderlist) handleLeaderSyncRequest(message *leadlist.Message,
 			for _, l := range leaderlist.List {
 				if l.Name == message.Sender.Name {
 					l.Status = leadlist.Leader_WORKING
+					updateVersion = true
 					break
 				}
 			}
@@ -99,7 +106,13 @@ func (leaderlist *Leaderlist) handleLeaderSyncRequest(message *leadlist.Message,
 	}
 
 	// Update remote IP address, if changed
-	leaderlist.updateRemoteIP(message, addr)
+	if leaderlist.updateRemoteIP(message, addr) {
+		updateVersion = true
+	}
+
+	if updateVersion {
+		leaderlist.leaderVersion++
+	}
 
 	leaderlist.Message.MsgType = leadlist.Message_LEADER_SYNC_REPLY
 	leaderlist.Message.Sender = message.Sender
@@ -117,6 +130,7 @@ func (leaderlist *Leaderlist) handleLeaderSyncReply(message *leadlist.Message, a
 	glog.Info(message)
 
 	leaderlist.List = message.LeaderList.Leader
+	leaderlist.leaderVersion++
 
 	glog.V(2).Infof("Replace List with (new) List: %q", leaderlist.List)
 	glog.V(3).Infof("chatleaders: %v", leaderlist)
@@ -146,7 +160,7 @@ func (leaderlist *Leaderlist) handlePingReply(message *leadlist.Message, addr ne
 	return nil
 }
 
-func (leaderlist *Leaderlist) updateRemoteIP(msg *leadlist.Message, addr net.Addr) {
+func (leaderlist *Leaderlist) updateRemoteIP(msg *leadlist.Message, addr net.Addr) bool {
 
 	// Check remote Ip address change of message
 	if msg.Sender.Ip != strings.Split(addr.String(), ":")[0] {
@@ -158,12 +172,18 @@ func (leaderlist *Leaderlist) updateRemoteIP(msg *leadlist.Message, addr net.Add
 		// Update leader List
 		for i, l := range leaderlist.List {
 			if l.Name == msg.Sender.Name {
-				leaderlist.List[i].Ip = strings.Split(addr.String(), ":")[0]
+				if leaderlist.List[i].Ip != strings.Split(addr.String(), ":")[0] {
+
+					leaderlist.List[i].Ip = strings.Split(addr.String(), ":")[0]
+					leaderlist.leaderVersion++
+
+					return true
+				}
 				break
 			}
 		}
-
 	}
+	return false
 }
 
 func (leaderlist *Leaderlist) sendSyncReply(message *leadlist.Message) error {
