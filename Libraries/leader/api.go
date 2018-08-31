@@ -15,12 +15,12 @@ func NewLeaderlist(name string,
 	memberName string,
 	memberIp string,
 	memberPort int,
-	memberStatus leadlist.Leader_LeaderStatus) (*Leaderlist, error) {
+	memberStatus leadlist.Leader_LeaderStatus) (*leaderlist, error) {
 
 	// Resolve IP string of service and update accordingly
 	addr, err := net.ResolveIPAddr("ip", serviceIp)
 	if err != nil {
-		fmt.Printf("no valid ip address of service %q for publishing service: %v\n", serviceIp, err.Error())
+		fmt.Printf("no valid ip address %q for service: %v\n", serviceIp, err.Error())
 		os.Exit(1)
 	}
 	serviceIp = addr.String()
@@ -33,7 +33,6 @@ func NewLeaderlist(name string,
 	}
 	memberIp = addr.String()
 
-	//fmt.Println("CHANGED")
 	member := &leadlist.Leader{
 		Name:   memberName,
 		Ip:     memberIp,
@@ -45,7 +44,7 @@ func NewLeaderlist(name string,
 
 	actionMap := make(map[leadlist.Message_MessageType]func(*leadlist.Message, net.Addr) error)
 
-	leader := &Leaderlist{
+	leader := &leaderlist{
 		name:    name,
 		leaderVersion: 0,
 		serviceIp: serviceIp,
@@ -70,8 +69,8 @@ func NewLeaderlist(name string,
 	return leader, nil
 }
 
-func (leaderlist *Leaderlist) String() string {
-	out := "leadergroup.Leaderlist:\n"
+func (leaderlist *leaderlist) String() string {
+	out := "leadergroup.leaderlist:\n"
 	out += fmt.Sprintf("\tName: %q\n", leaderlist.name)
 	out += fmt.Sprintf("\tService: ip:%q port:%d\n",
 		leaderlist.serviceIp, leaderlist.servicePort)
@@ -85,16 +84,16 @@ func (leaderlist *Leaderlist) String() string {
 	return out
 }
 
-func (leaderlist *Leaderlist) SetServiceIp(ip string) {
+func (leaderlist *leaderlist) SetServiceIp(ip string) {
 	leaderlist.serviceIp = ip
 }
 
-func (leaderlist *Leaderlist) ServiceIp() string {
+func (leaderlist *leaderlist) ServiceIp() string {
 
 	return leaderlist.serviceIp
 }
 
-func (leaderlist *Leaderlist) SetServicePort(port string) error {
+func (leaderlist *leaderlist) SetServicePort(port string) error {
 	p, err := strconv.Atoi(port)
 	// Todo check valid port
 	if err != nil {
@@ -104,23 +103,23 @@ func (leaderlist *Leaderlist) SetServicePort(port string) error {
 	return nil
 }
 
-func (leaderlist *Leaderlist) ServicePort() int {
+func (leaderlist *leaderlist) ServicePort() int {
 
 	return leaderlist.servicePort
 }
 
-func (leaderlist *Leaderlist) SetMemberStatus(memberStatus leadlist.Leader_LeaderStatus) {
+func (leaderlist *leaderlist) SetMemberStatus(memberStatus leadlist.Leader_LeaderStatus) {
 	leaderlist.member.Status = memberStatus
 }
 
-func (leaderlist *Leaderlist) MemberStatus() leadlist.Leader_LeaderStatus {
+func (leaderlist *leaderlist) MemberStatus() leadlist.Leader_LeaderStatus {
 
 	return leaderlist.member.Status
 }
 
 
 
-func (leaderlist *Leaderlist) LeaderAddress() string {
+func (leaderlist *leaderlist) LeaderAddress() string {
 
 	for _, m := range leaderlist.List {
 		if m.Status == leadlist.Leader_WORKING {
@@ -129,38 +128,38 @@ func (leaderlist *Leaderlist) LeaderAddress() string {
 	}
 	return ""
 }
-func (leaderlist *Leaderlist) LeaderVersion() int {
+func (leaderlist *leaderlist) LeaderVersion() int {
 
 	return leaderlist.leaderVersion
 }
 
-func (leaderlist *Leaderlist) RunService() (bool, error) {
+func (leaderlist *leaderlist) RunService() (bool, error) {
 
-	return leaderlist.TcpListen(fmt.Sprintf("%s:%d", leaderlist.serviceIp, leaderlist.servicePort),
+	return leaderlist.tcpListen(fmt.Sprintf("%s:%d", leaderlist.serviceIp, leaderlist.servicePort),
 		true)
 }
 
-func (leaderlist *Leaderlist) RunClient() (bool, error) {
+func (leaderlist *leaderlist) RunClient() (bool, error) {
 
-	return leaderlist.TcpListen(fmt.Sprintf("%s:%s", leaderlist.member.Ip, leaderlist.member.Port),
+	return leaderlist.tcpListen(fmt.Sprintf("%s:%s", leaderlist.member.Ip, leaderlist.member.Port),
 		false)
 }
 
-func (leaderlist *Leaderlist) SyncService() error {
+func (leaderlist *leaderlist) SyncService() error {
 
 	leaderlist.Message.MsgType = leadlist.Message_LEADER_SYNC_REQUEST
 
-	go leaderlist.TcpSend(leaderlist.Message, fmt.Sprintf("%s:%d", leaderlist.serviceIp, leaderlist.servicePort))
+	go leaderlist.tcpSend(leaderlist.Message, fmt.Sprintf("%s:%d", leaderlist.serviceIp, leaderlist.servicePort))
 
 	return nil
 }
 
-func (leaderlist *Leaderlist) PingMember(member string) error {
+func (leaderlist *leaderlist) PingMember(member string) error {
 	for _, m := range leaderlist.List {
 
 		if m.Name == member {
 			leaderlist.Message.MsgType = leadlist.Message_PING_REQUEST
-			return leaderlist.TcpSend(leaderlist.Message, fmt.Sprintf("%s:%s", m.Ip, m.Port))
+			return leaderlist.tcpSend(leaderlist.Message, fmt.Sprintf("%s:%s", m.Ip, m.Port))
 		}
 	}
 	// todo error member not found

@@ -1,33 +1,18 @@
 package leader
 
 import (
+	"fmt"
 	"log"
 	"testing"
-
-	"bitbucket.org/stefanhans/go-thesis/Libraries/leader/leaderlist"
 	"time"
-	"fmt"
+
+	leadlist "bitbucket.org/stefanhans/go-thesis/Libraries/leader/leaderlist"
 )
-
-//func TestServiceLeaderlist(t *testing.T) {
-//
-//	testleaders, err := NewLeaderlist("testlist", "localhost", 22365, "alice",
-//		"localhost", 12345, leaderlist.Leader_CANDIDATE)
-//	if err != nil {
-//		log.Fatalf("could not create new leaderlist: %v", err)
-//	}
-//	if testleaders.String() != "" {
-//
-//		t.Errorf("test error!!!: %v", testleaders)
-//	}
-//}
-
-
 
 func TestServiceAndLeader(t *testing.T) {
 
 	service, err := NewLeaderlist("testlist", "localhost", 22365, "service",
-		"localhost", 12345, leaderlist.Leader_SERVICE)
+		"localhost", 12345, leadlist.Leader_SERVICE)
 	if err != nil {
 		log.Fatalf("could not create new leaderlist: %v", err)
 	}
@@ -36,7 +21,7 @@ func TestServiceAndLeader(t *testing.T) {
 		t.Errorf("Unexpected initial leader version: %v", service.LeaderVersion())
 	}
 
-	service.SetMemberStatus(leaderlist.Leader_SERVICE)
+	service.SetMemberStatus(leadlist.Leader_SERVICE)
 	_, err = service.RunService()
 	if err != nil {
 		t.Fatalf("could not run service: %v", err)
@@ -47,7 +32,7 @@ func TestServiceAndLeader(t *testing.T) {
 	}
 
 	leader, err := NewLeaderlist("testlist", "localhost", 22365, "alice",
-		"localhost", 12346, leaderlist.Leader_CANDIDATE)
+		"localhost", 12346, leadlist.Leader_CANDIDATE)
 	if err != nil {
 		log.Fatalf("could not create new leaderlist: %v", err)
 	}
@@ -56,7 +41,7 @@ func TestServiceAndLeader(t *testing.T) {
 		t.Errorf("Unexpected initial leader version: %v", leader.LeaderVersion())
 	}
 
-	leader.SetMemberStatus(leaderlist.Leader_CANDIDATE)
+	leader.SetMemberStatus(leadlist.Leader_CANDIDATE)
 	_, err = leader.RunClient()
 	if err != nil {
 		t.Fatalf("could not run leader: %v", err)
@@ -67,11 +52,10 @@ func TestServiceAndLeader(t *testing.T) {
 		log.Fatalf("could not sync leader and service: %v", err)
 	}
 
-
 	fmt.Printf("start waiting\n")
 
 	for leader.LeaderVersion() <= 0 {
-		time.Sleep(time.Millisecond*10)
+		time.Sleep(time.Millisecond * 10)
 	}
 
 	if leader.LeaderVersion() != service.leaderVersion {
