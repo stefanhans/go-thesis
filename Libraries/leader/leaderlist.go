@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"syscall"
 
 	leadlist "bitbucket.org/stefanhans/go-thesis/Libraries/leader/leaderlist"
 	"github.com/golang/glog"
@@ -37,7 +36,7 @@ func (leaderlist *leaderlist) tcpListen(addr string, acceptAddrInUse bool) (bool
 
 		// "address already in use" error
 		if acceptAddrInUse {
-			if err == syscall.EADDRINUSE {
+			if strings.Contains(err.Error(), "address already in use") {
 				return false, nil
 			}
 		}
@@ -202,7 +201,7 @@ func (leaderlist *leaderlist) handleLeaderSyncRequest(message *leadlist.Message,
 	leaderlist.Message.Sender = message.Sender
 	leaderlist.Message.LeaderList.Leader = leaderlist.List
 
-	err := leaderlist.tcpSend(leaderlist.Message, message.Sender.Ip+":"+message.Sender.Port)
+	err := leaderlist.sendSyncReply(leaderlist.Message)
 	if err != nil {
 		fmt.Printf("tcpSend: %v: %v", message, err)
 	}
