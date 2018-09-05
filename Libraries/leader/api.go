@@ -8,21 +8,38 @@ import (
 	leadlist "bitbucket.org/stefanhans/go-thesis/Libraries/leader/leaderlist"
 )
 
+// MemberNotFound is an error containing the name of the missing member
 type MemberNotFound struct {
-	name string
+	Name string
 }
 
+// Error returns the error message with the missing member
 func (e *MemberNotFound) Error() string {
-	return fmt.Sprintf("member %q not found", e.name)
+	return fmt.Sprintf("member %q not found", e.Name)
 }
 
-func NewLeaderlist(name string,
+// NewLeaderlist creates a struct which mainly contains
+//
+// - an identifier
+//
+// - an IP address of its service
+//
+// - an IP address of itself as a member
+//
+// - a list of members
+//
+// - a message to be customized and sent
+//
+// - a map of functions for the appropriate message type to be handled
+//
+func NewLeaderlist(
+	name string,
 	serviceIp string,
-	servicePort int,
+	servicePort string,
 	memberName string,
 	memberIp string,
-	memberPort int,
-	memberStatus leadlist.Leader_LeaderStatus) (*leaderlist, error) {
+	memberPort string,
+	memberStatus leadlist.Leader_LeaderStatus) (*Leaderlist, error) {
 
 	// Resolve IP string of service and update accordingly
 	addr, err := net.ResolveIPAddr("ip", serviceIp)
@@ -41,7 +58,7 @@ func NewLeaderlist(name string,
 	member := &leadlist.Leader{
 		Name:   memberName,
 		Ip:     memberIp,
-		Port:   fmt.Sprint(memberPort),
+		Port:   memberPort,
 		Status: memberStatus,
 	}
 	var list []*leadlist.Leader
@@ -49,14 +66,14 @@ func NewLeaderlist(name string,
 
 	actionMap := make(map[leadlist.Message_MessageType]func(*leadlist.Message, net.Addr) error)
 
-	leader := &leaderlist{
+	leader := &Leaderlist{
 		name:          name,
 		leaderVersion: 0,
 		serviceIp:     serviceIp,
 		servicePort:   servicePort,
 		member:        member,
-		List:          list,
-		Message: &leadlist.Message{
+		list:          list,
+		message: &leadlist.Message{
 			MsgType: leadlist.Message_LEADER_SYNC_REQUEST,
 			Sender:  member,
 			LeaderList: &leadlist.LeaderList{
@@ -74,95 +91,116 @@ func NewLeaderlist(name string,
 	return leader, nil
 }
 
-func (leaderlist *leaderlist) String() string {
+// String() shows a textual representation of a leaderlist
+func (leaderlist *Leaderlist) String() string {
 	out := "leadergroup.leaderlist:\n"
 	out += fmt.Sprintf("\tName: %q\n", leaderlist.name)
-	out += fmt.Sprintf("\tService: ip:%q port:%d\n",
+	out += fmt.Sprintf("\tService: ip:%q port:%q\n",
 		leaderlist.serviceIp, leaderlist.servicePort)
-	for i, l := range leaderlist.List {
+	for i, l := range leaderlist.list {
 		out += fmt.Sprintf("\tList[%d]: name:%q ip:%q port:%q status:%v\n",
 			i, l.Name, l.Ip, l.Port, l.Status)
 	}
-	out += fmt.Sprintf("\tMessage: %v\n", leaderlist.Message)
+	out += fmt.Sprintf("\tMessage: %v\n", leaderlist.message)
 	out += fmt.Sprintf("\tActionMap: %v\n", leaderlist.actionMap)
 
 	return out
 }
 
-func (leaderlist *leaderlist) SetServiceIp(ip string) {
+// SetServiceIp sets the IP address of its service
+func (leaderlist *Leaderlist) SetServiceIp(ip string) {
 	leaderlist.serviceIp = ip
 }
 
-func (leaderlist *leaderlist) ServiceIp() string {
+// ServiceIp returns the IP address of its service
+func (leaderlist *Leaderlist) ServiceIp() string {
 
 	return leaderlist.serviceIp
 }
 
-func (leaderlist *leaderlist) SetServicePort(port string) error {
+// SetServicePort sets the port number of its service
+func (leaderlist *Leaderlist) SetServicePort(port string) error {
+
+	// Port number is an integer
 	p, err := strconv.Atoi(port)
-	// Todo check valid port
 	if err != nil {
 		return err
 	}
-	leaderlist.servicePort = p
+
+	// Within free port number range without root access, i.e. [1024, 65535]
+	if p < 1024 || p > 65535 {
+		return fmt.Errorf("portnumber %d not between 1024 and 65535", p)
+	}
+
+	leaderlist.servicePort = port
 	return nil
 }
 
-func (leaderlist *leaderlist) ServicePort() int {
+// ServicePort returns the port number of its service
+func (leaderlist *Leaderlist) ServicePort() string {
 
 	return leaderlist.servicePort
 }
 
-func (leaderlist *leaderlist) SetMemberStatus(memberStatus leadlist.Leader_LeaderStatus) {
+// SetMemberStatus sets the status of itself as a member
+func (leaderlist *Leaderlist) SetMemberStatus(memberStatus leadlist.Leader_LeaderStatus) {
 	leaderlist.member.Status = memberStatus
 }
 
-func (leaderlist *leaderlist) MemberStatus() leadlist.Leader_LeaderStatus {
+// MemberStatus returns the status of itself as a member
+func (leaderlist *Leaderlist) MemberStatus() leadlist.Leader_LeaderStatus {
 
 	return leaderlist.member.Status
 }
 
-func (leaderlist *leaderlist) LeaderAddress() string {
+// LeaderAddress returns the IP address of its leader
+func (leaderlist *Leaderlist) LeaderAddress() string {
 
-	for _, m := range leaderlist.List {
+	for _, m := range leaderlist.list {
 		if m.Status == leadlist.Leader_WORKING {
-			return fmt.Sprintf("%s:%s", m.Ip, m.Port)
+			return net.JoinHostPort(m.Ip, m.Port)
 		}
 	}
 	return ""
 }
-func (leaderlist *leaderlist) LeaderVersion() int {
+
+// LeaderVersion returns the version of the leaderlist
+func (leaderlist *Leaderlist) LeaderVersion() int {
 
 	return leaderlist.leaderVersion
 }
 
-func (leaderlist *leaderlist) RunService() (bool, error) {
+// RunService start the TCP listener to handle incoming requests for the service
+func (leaderlist *Leaderlist) RunService() (bool, error) {
 
-	return leaderlist.tcpListen(fmt.Sprintf("%s:%d", leaderlist.serviceIp, leaderlist.servicePort),
+	return leaderlist.tcpListen(net.JoinHostPort(leaderlist.serviceIp, leaderlist.servicePort),
 		true)
 }
 
-func (leaderlist *leaderlist) RunClient() (bool, error) {
+// RunClient start the TCP listener to handle incoming replies from the service
+func (leaderlist *Leaderlist) RunClient() (bool, error) {
 
-	return leaderlist.tcpListen(fmt.Sprintf("%s:%s", leaderlist.member.Ip, leaderlist.member.Port),
+	return leaderlist.tcpListen(net.JoinHostPort(leaderlist.member.Ip, leaderlist.member.Port),
 		false)
 }
 
-func (leaderlist *leaderlist) SyncService() error {
+// SyncService sends a request to synchronize the leaderlist, i.e. returns SERVICE and WORKING members only
+func (leaderlist *Leaderlist) SyncService() error {
 
-	leaderlist.Message.MsgType = leadlist.Message_LEADER_SYNC_REQUEST
+	leaderlist.message.MsgType = leadlist.Message_LEADER_SYNC_REQUEST
 
-	go leaderlist.tcpSend(leaderlist.Message, fmt.Sprintf("%s:%d", leaderlist.serviceIp, leaderlist.servicePort))
+	go leaderlist.tcpSend(leaderlist.message, net.JoinHostPort(leaderlist.serviceIp, leaderlist.servicePort))
 
 	return nil
 }
 
-func (leaderlist *leaderlist) PingMember(member string) error {
-	for _, m := range leaderlist.List {
+// PingMember sends a ping like request to a named member of the list
+func (leaderlist *Leaderlist) PingMember(member string) error {
+	for _, m := range leaderlist.list {
 
 		if m.Name == member {
-			leaderlist.Message.MsgType = leadlist.Message_PING_REQUEST
-			return leaderlist.tcpSend(leaderlist.Message, fmt.Sprintf("%s:%s", m.Ip, m.Port))
+			leaderlist.message.MsgType = leadlist.Message_PING_REQUEST
+			return leaderlist.tcpSend(leaderlist.message, net.JoinHostPort(m.Ip, m.Port))
 		}
 	}
 	return &MemberNotFound{member}

@@ -14,10 +14,10 @@ import (
 func TestSimpleNewLeaderlist(t *testing.T) {
 	name := "testlist"
 	serviceIp := "127.0.0.1"
-	servicePort := 22365
+	servicePort := "22365"
 	memberName := "service"
 	memberIp := "127.0.0.1"
-	memberPort := 12345
+	memberPort := "12345"
 	memberStatus := leadlist.Leader_UNKNOWN
 
 	leaderlist, err := NewLeaderlist(name, serviceIp, servicePort, memberName,
@@ -67,7 +67,7 @@ func TestSimpleNewLeaderlist(t *testing.T) {
 	// memberPort
 	t.Run("memberPort", func(t *testing.T) {
 
-		if leaderlist.member.Port != fmt.Sprintf("%d", memberPort) {
+		if leaderlist.member.Port != memberPort {
 			t.Errorf("Unexpected memberPort: %v", leaderlist.member.Port)
 		}
 	})
@@ -84,10 +84,10 @@ func TestSimpleNewLeaderlist(t *testing.T) {
 func TestResolveIpNewLeaderlist(t *testing.T) {
 	name := "testlist"
 	serviceIp := "localhost"
-	servicePort := 22365
+	servicePort := "22365"
 	memberName := "service"
 	memberIp := "localhost"
-	memberPort := 12345
+	memberPort := "12345"
 	memberStatus := leadlist.Leader_UNKNOWN
 
 	leaderlist, err := NewLeaderlist(name, serviceIp, servicePort, memberName,
@@ -138,10 +138,10 @@ func TestResolveIpNewLeaderlist(t *testing.T) {
 func TestString(t *testing.T) {
 	name := "testlist"
 	serviceIp := "127.0.0.1"
-	servicePort := 22365
+	servicePort := "22365"
 	memberName := "service"
 	memberIp := "127.0.0.1"
-	memberPort := 12345
+	memberPort := "12345"
 	memberStatus := leadlist.Leader_UNKNOWN
 
 	leaderlist, err := NewLeaderlist(name, serviceIp, servicePort, memberName,
@@ -158,8 +158,8 @@ func TestString(t *testing.T) {
 		if !strings.Contains(leaderlist.String(), serviceIp) {
 			t.Errorf("No serviceIp %q in String(): %v", serviceIp, leaderlist.String())
 		}
-		if !strings.Contains(leaderlist.String(), fmt.Sprintf("%d", servicePort)) {
-			t.Errorf("No servicePort %d in String(): %v", servicePort, leaderlist.String())
+		if !strings.Contains(leaderlist.String(), servicePort) {
+			t.Errorf("No servicePort %q in String(): %v", servicePort, leaderlist.String())
 		}
 		if !strings.Contains(leaderlist.String(), memberName) {
 			t.Errorf("No memberName %q in String(): %v", memberName, leaderlist.String())
@@ -167,8 +167,8 @@ func TestString(t *testing.T) {
 		if !strings.Contains(leaderlist.String(), memberIp) {
 			t.Errorf("No memberIp %q in String(): %v", memberIp, leaderlist.String())
 		}
-		if !strings.Contains(leaderlist.String(), fmt.Sprintf("%d", memberPort)) {
-			t.Errorf("No memberPort %d in String(): %v", memberPort, leaderlist.String())
+		if !strings.Contains(leaderlist.String(), memberPort) {
+			t.Errorf("No memberPort %q in String(): %v", memberPort, leaderlist.String())
 		}
 		if !strings.Contains(leaderlist.String(), fmt.Sprintf("%v", memberStatus)) {
 			t.Errorf("No memberStatus %v in String(): %v", memberStatus, leaderlist.String())
@@ -179,10 +179,10 @@ func TestString(t *testing.T) {
 func TestSetterGetter(t *testing.T) {
 	name := "testlist"
 	serviceIp := "127.0.0.1"
-	servicePort := 22365
+	servicePort := "22365"
 	memberName := "service"
 	memberIp := "127.0.0.1"
-	memberPort := 12345
+	memberPort := "12345"
 	memberStatus := leadlist.Leader_UNKNOWN
 
 	leaderlist, err := NewLeaderlist(name, serviceIp, servicePort, memberName,
@@ -200,17 +200,28 @@ func TestSetterGetter(t *testing.T) {
 	})
 
 	// ServicePort
-	t.Run("ServicePort", func(t *testing.T) {
-		leaderlist.SetServicePort("42")
-		if leaderlist.ServicePort() != 42 {
-			t.Errorf("Unexpected result from ServicePort(): %v", leaderlist.ServicePort())
-		}
-
-		err = leaderlist.SetServicePort("invalid")
-		if err == nil {
-			t.Errorf("Unexpected result from SetServicePort(): %v", err)
-		}
-	})
+	var porttests = []struct {
+		port  string
+		valid bool
+	}{
+		{"22365", true},
+		{"1024", true},
+		{"65535", true},
+		{"invalid", false},
+		{"-1", false},
+		{"0", false},
+		{"1023", false},
+		{"65536", false},
+		{"1234567890", false},
+	}
+	for _, pt := range porttests {
+		t.Run("ServicePort", func(t *testing.T) {
+			leaderlist.SetServicePort(pt.port)
+			if (leaderlist.ServicePort() == pt.port) != pt.valid {
+				t.Errorf("Unexpected validity %v from ServicePort(%q): %v", pt.valid, pt.port, leaderlist.ServicePort())
+			}
+		})
+	}
 
 	// MemberStatus
 	t.Run("MemberStatus", func(t *testing.T) {
@@ -238,10 +249,10 @@ func TestSetterGetter(t *testing.T) {
 func TestService(t *testing.T) {
 	name := "testlist"
 	serviceIp := "127.0.0.1"
-	servicePort := 22365
+	servicePort := "22365"
 	memberName := "service"
 	memberIp := "127.0.0.1"
-	memberPort := 12345
+	memberPort := "12345"
 	memberStatus := leadlist.Leader_SERVICE
 
 	service, err := NewLeaderlist(name, serviceIp, servicePort, memberName,
@@ -279,10 +290,10 @@ func TestService(t *testing.T) {
 func TestLeaderAddress(t *testing.T) {
 	name := "testlist"
 	serviceIp := "127.0.0.1"
-	servicePort := 22366
+	servicePort := "22366"
 	memberName := "service"
 	memberIp := "127.0.0.1"
-	memberPort := 12345
+	memberPort := "12345"
 	memberStatus := leadlist.Leader_SERVICE
 
 	service, err := NewLeaderlist(name, serviceIp, servicePort, memberName,
@@ -300,14 +311,13 @@ func TestLeaderAddress(t *testing.T) {
 	})
 }
 
-
 func TestSyncService(t *testing.T) {
 	name := "TestSyncService"
 	serviceIp := "127.0.0.1"
-	servicePort := 22367
+	servicePort := "22367"
 	memberName := "service"
 	memberIp := "127.0.0.1"
-	memberPort := 12345
+	memberPort := "12345"
 	memberStatus := leadlist.Leader_SERVICE
 
 	service, err := NewLeaderlist(name, serviceIp, servicePort, memberName,
@@ -330,7 +340,7 @@ func TestSyncService(t *testing.T) {
 	}
 
 	memberName = "alice"
-	memberPort = 12345
+	memberPort = "12345"
 	memberStatus = leadlist.Leader_CANDIDATE
 	leader, err := NewLeaderlist(name, serviceIp, servicePort, memberName,
 		memberIp, memberPort, memberStatus)
@@ -368,10 +378,10 @@ func TestSyncService(t *testing.T) {
 func TestPingMember(t *testing.T) {
 	name := "TestPingMember"
 	serviceIp := "127.0.0.1"
-	servicePort := 22368
+	servicePort := "22368"
 	memberName := "service"
 	memberIp := "127.0.0.1"
-	memberPort := 12345
+	memberPort := "12345"
 	memberStatus := leadlist.Leader_SERVICE
 
 	service, err := NewLeaderlist(name, serviceIp, servicePort, memberName,
@@ -394,7 +404,7 @@ func TestPingMember(t *testing.T) {
 	}
 
 	memberName = "alice"
-	memberPort = 12346
+	memberPort = "12346"
 	memberStatus = leadlist.Leader_CANDIDATE
 	leader, err := NewLeaderlist(name, serviceIp, servicePort, memberName,
 		memberIp, memberPort, memberStatus)
@@ -436,7 +446,6 @@ func TestPingMember(t *testing.T) {
 	// For coverage
 	_ = err.Error()
 }
-
 
 //t.Run("ServiceVersion", func(t *testing.T) {
 //	if service.LeaderVersion() != 0 {

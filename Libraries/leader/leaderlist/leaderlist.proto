@@ -30,6 +30,7 @@ message Message {
         LEADER_SYNC_REPLY = 1;
         PING_REQUEST = 2;
         PING_REPLY = 3;
+        INVALID = 4;
     }
     MessageType msgType = 1;
     Leader  sender = 2;
